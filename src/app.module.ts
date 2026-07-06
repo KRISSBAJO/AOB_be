@@ -1,0 +1,62 @@
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+
+import { validateEnv } from "./config/env.validation";
+import { OptionalApiKeyGuard } from "./common/guards/optional-api-key.guard";
+import { JsonSerializationInterceptor } from "./common/interceptors/json-serialization.interceptor";
+import { PrismaExceptionFilter } from "./common/filters/prisma-exception.filter";
+import { HealthModule } from "./health/health.module";
+import { PrismaModule } from "./prisma/prisma.module";
+import { ResourcesModule } from "./resources/resources.module";
+import { AuthModule } from "./auth/auth.module";
+import { UsersModule } from "./users/users.module";
+import { WorkspacesModule } from "./workspaces/workspaces.module";
+import { RolesModule } from "./roles/roles.module";
+import { PermissionsModule } from "./permissions/permissions.module";
+import { CustomersModule } from "./customers/customers.module";
+import { ServicesModule } from "./services/services.module";
+import { ContractsModule } from "./contracts/contracts.module";
+import { ServiceRequestsModule } from "./service-requests/service-requests.module";
+import { WorkOrdersModule } from "./work-orders/work-orders.module";
+import { WorkforceModule } from "./workforce/workforce.module";
+import { SchedulingModule } from "./scheduling/scheduling.module";
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+    }),
+    PrismaModule,
+    HealthModule,
+    AuthModule,
+    UsersModule,
+    WorkspacesModule,
+    RolesModule,
+    PermissionsModule,
+    CustomersModule,
+    ServicesModule,
+    ContractsModule,
+    ServiceRequestsModule,
+    WorkOrdersModule,
+    WorkforceModule,
+    SchedulingModule,
+    ResourcesModule,
+  ],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: PrismaExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: JsonSerializationInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: OptionalApiKeyGuard,
+    },
+  ],
+})
+export class AppModule {}

@@ -1,0 +1,2124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================
+// ENUMS
+// =============================
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  DELETED
+}
+
+enum ServiceLine {
+  CLEANING
+  SECURITY
+  PARKING
+  EVENT_SETUP
+  FACILITY_SUPPORT
+  OTHER
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  COMPANY
+  GOVERNMENT
+  NON_PROFIT
+  OTHER
+}
+
+enum CustomerStatus {
+  LEAD
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum FacilityType {
+  OFFICE
+  RESIDENTIAL
+  SCHOOL
+  HOSPITAL
+  HOTEL
+  WAREHOUSE
+  RETAIL
+  EVENT_VENUE
+  PARKING_LOT
+  INDUSTRIAL
+  OTHER
+}
+
+enum FacilityStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum ContactRole {
+  OWNER
+  ADMIN
+  FACILITY_MANAGER
+  FACILITY_REPRESENTATIVE
+  FINANCE
+  OPERATIONS
+  SECURITY
+  OTHER
+}
+
+enum ServiceUnit {
+  HOUR
+  DAY
+  SHIFT
+  VISIT
+  EVENT
+  SQFT
+  MONTH
+  UNIT
+}
+
+enum ServiceRequestStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SCHEDULED
+  ASSIGNED
+  IN_PROGRESS
+  ON_HOLD
+  QA_REVIEW
+  CUSTOMER_REVIEW
+  COMPLETED
+  CANCELLED
+  INVOICED
+}
+
+enum ServiceRequestPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+  EMERGENCY
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  EXPIRED
+  TERMINATED
+  RENEWAL_PENDING
+}
+
+enum BillingFrequency {
+  ONE_TIME
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  CUSTOM
+}
+
+enum RecurrenceFrequency {
+  NONE
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  CUSTOM
+}
+
+enum WorkOrderStatus {
+  CREATED
+  SCHEDULED
+  ASSIGNED
+  DISPATCHED
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+  QA_FAILED
+  QA_PASSED
+  CUSTOMER_APPROVED
+  CANCELLED
+}
+
+enum WorkOrderTaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+enum WorkOrderAssignmentRole {
+  SUPERVISOR
+  CLEANER
+  SECURITY_OFFICER
+  PARKING_ATTENDANT
+  EVENT_STAFF
+  DRIVER
+  OTHER
+}
+
+enum WorkOrderPhotoType {
+  BEFORE
+  AFTER
+  ISSUE
+  GENERAL
+  SIGNATURE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACTOR
+  TEMPORARY
+  INTERN
+}
+
+enum DepartmentType {
+  CLEANING
+  SECURITY
+  PARKING
+  EVENT
+  OPERATIONS
+  ADMIN
+  FINANCE
+  HR
+  OTHER
+}
+
+enum ShiftStatus {
+  DRAFT
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  ON_LEAVE
+  HOLIDAY
+  EXCUSED
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  EMERGENCY
+  UNPAID
+  MATERNITY
+  PATERNITY
+  OTHER
+}
+
+enum LeaveStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ConversationType {
+  CLIENT_INTERNAL
+  SERVICE_REQUEST
+  WORK_ORDER
+  FACILITY
+  GENERAL
+  ANNOUNCEMENT
+}
+
+enum ConversationParticipantType {
+  USER
+  EMPLOYEE
+  CUSTOMER_CONTACT
+  SYSTEM
+}
+
+enum MessageVisibility {
+  INTERNAL
+  CLIENT_VISIBLE
+}
+
+enum NotificationType {
+  SERVICE_REQUEST
+  WORK_ORDER
+  MESSAGE
+  CONTRACT
+  BILLING
+  QA
+  STAFF
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum InspectionStatus {
+  DRAFT
+  IN_PROGRESS
+  PASSED
+  FAILED
+  NEEDS_CORRECTION
+  COMPLETED
+}
+
+enum InspectionItemResultValue {
+  PASS
+  FAIL
+  NA
+}
+
+enum ComplaintStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+  CANCELLED
+}
+
+enum CorrectiveActionStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  VOID
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethodType {
+  CASH
+  BANK_TRANSFER
+  CARD
+  CHECK
+  MOBILE_MONEY
+  OTHER
+}
+
+enum TaxType {
+  PERCENTAGE
+  FIXED
+}
+
+enum AttachmentEntityType {
+  CUSTOMER
+  FACILITY
+  SERVICE_REQUEST
+  CONTRACT
+  WORK_ORDER
+  INSPECTION
+  INVOICE
+  PAYMENT
+  EMPLOYEE
+  COMPLAINT
+  INCIDENT
+  MESSAGE
+  OTHER
+}
+
+enum DocumentType {
+  CONTRACT
+  INVOICE
+  RECEIPT
+  PHOTO
+  ID_DOCUMENT
+  CERTIFICATE
+  INSPECTION_REPORT
+  SIGNATURE
+  OTHER
+}
+
+enum IncidentType {
+  CLEANING
+  SECURITY
+  PARKING
+  STAFF
+  CUSTOMER
+  PROPERTY_DAMAGE
+  HEALTH_SAFETY
+  OTHER
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+  CANCELLED
+}
+
+enum BackgroundJobType {
+  EMAIL_DELIVERY
+  SMS_DELIVERY
+  PUSH_DELIVERY
+  INVOICE_GENERATION
+  REPORT_EXPORT
+  WEBHOOK_DELIVERY
+  AUDIT_EXPORT
+}
+
+enum BackgroundJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+// =============================
+// CORE PLATFORM
+// =============================
+
+model User {
+  id                              String                        @id @default(cuid())
+  email                           String                        @unique
+  passwordHash                    String
+  displayName                     String
+  phone                           String?
+  avatarUrl                       String?
+  status                          UserStatus                    @default(ACTIVE)
+  isSiteAdmin                     Boolean                       @default(false)
+  lastLoginAt                     DateTime?
+  deletedAt                       DateTime?
+  createdAt                       DateTime                      @default(now())
+  updatedAt                       DateTime                      @updatedAt
+
+  ownedWorkspaces                 Workspace[]                   @relation("WorkspaceOwner")
+  memberships                     WorkspaceMembership[]
+  userRoles                       UserRole[]
+  employeeProfile                 Employee?                     @relation("EmployeeUser")
+  customerContactProfile          CustomerContact?              @relation("CustomerContactUser")
+  refreshSessions                 RefreshSession[]
+  passwordResets                  PasswordResetToken[]
+
+  createdServiceRequests          ServiceRequest[]              @relation("ServiceRequestCreator")
+  managedServiceRequests          ServiceRequest[]              @relation("ServiceRequestAssignedManager")
+  serviceRequestStatusChanges     ServiceRequestStatusHistory[] @relation("ServiceRequestStatusChanger")
+  createdContracts                Contract[]                    @relation("ContractCreator")
+  createdWorkOrders               WorkOrder[]                   @relation("WorkOrderCreator")
+  workOrderStatusChanges          WorkOrderStatusHistory[]      @relation("WorkOrderStatusChanger")
+  uploadedWorkOrderPhotos         WorkOrderPhoto[]              @relation("WorkOrderPhotoUserUploader")
+  reviewedLeaveRequests           LeaveRequest[]                @relation("LeaveRequestReviewer")
+
+  conversationParticipants        ConversationParticipant[]
+  sentMessages                    Message[]                     @relation("MessageSender")
+  notifications                   Notification[]
+  uploadedAttachments             Attachment[]                  @relation("AttachmentUploader")
+  comments                        Comment[]                     @relation("CommentAuthor")
+  auditLogs                       AuditLog[]                    @relation("AuditActor")
+
+  createdInspections              Inspection[]                  @relation("InspectionCreator")
+  createdInvoices                 Invoice[]                     @relation("InvoiceCreator")
+  receivedPayments                Payment[]                     @relation("PaymentReceiver")
+  createdFeedbacks                CustomerFeedback[]            @relation("FeedbackCreator")
+  createdComplaints               Complaint[]                   @relation("ComplaintCreator")
+  assignedComplaints              Complaint[]                   @relation("ComplaintAssignee")
+  createdCorrectiveActions        CorrectiveAction[]            @relation("CorrectiveActionCreator")
+  assignedCorrectiveActions       CorrectiveAction[]            @relation("CorrectiveActionAssignee")
+  reportedIncidents               Incident[]                    @relation("IncidentReporter")
+  assignedIncidents               Incident[]                    @relation("IncidentAssignee")
+
+  @@index([createdAt(sort: Desc)])
+  @@index([status, deletedAt])
+  @@index([isSiteAdmin])
+}
+
+model RefreshSession {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String
+  userAgent   String?
+  ipAddress   String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([tokenHash])
+}
+
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Workspace {
+  id                    String                  @id @default(cuid())
+  name                  String
+  slug                  String                  @unique
+  description           String?
+  logoUrl               String?
+  supportEmail          String?
+  phone                 String?
+  addressLine1          String?
+  addressLine2          String?
+  city                  String?
+  state                 String?
+  postalCode            String?
+  country               String?
+  timezone              String                  @default("UTC")
+  currency              String                  @default("USD")
+  ownerId               String
+  isActive              Boolean                 @default(true)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  owner                 User                    @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  memberships           WorkspaceMembership[]
+  roles                 Role[]
+  userRoles             UserRole[]
+
+  customers             Customer[]
+  customerContacts      CustomerContact[]
+  facilities            Facility[]
+  facilityContacts      FacilityContact[]
+
+  serviceCategories     ServiceCategory[]
+  services              Service[]
+  servicePrices         ServicePrice[]
+  serviceRequirements   ServiceRequirement[]
+  serviceAreas          ServiceArea[]
+
+  contracts             Contract[]
+  contractFacilities    ContractFacility[]
+  contractServices      ContractService[]
+  contractSchedules     ContractSchedule[]
+  serviceRequests       ServiceRequest[]
+  serviceRequestItems   ServiceRequestItem[]
+  serviceStatusHistory  ServiceRequestStatusHistory[]
+  workOrders            WorkOrder[]
+  workOrderTasks        WorkOrderTask[]
+  workOrderAssignments  WorkOrderAssignment[]
+  workOrderStatusHistory WorkOrderStatusHistory[]
+  workOrderPhotos       WorkOrderPhoto[]
+  workOrderSignoffs     WorkOrderSignoff[]
+
+  departments           Department[]
+  positions             Position[]
+  employees             Employee[]
+  skills                Skill[]
+  employeeSkills        EmployeeSkill[]
+  certifications        Certification[]
+  employeeCertifications EmployeeCertification[]
+  employeeEmergencyContacts EmployeeEmergencyContact[]
+  employeeAvailabilities EmployeeAvailability[]
+  shifts                Shift[]
+  shiftAssignments      ShiftAssignment[]
+  attendanceRecords     Attendance[]
+  leaveRequests         LeaveRequest[]
+
+  conversations         Conversation[]
+  conversationParticipants ConversationParticipant[]
+  messages              Message[]
+  messageAttachments    MessageAttachment[]
+  notifications         Notification[]
+
+  inspectionTemplates   InspectionTemplate[]
+  inspectionTemplateItems InspectionTemplateItem[]
+  inspections           Inspection[]
+  inspectionItemResults InspectionItemResult[]
+  feedbacks             CustomerFeedback[]
+  complaints            Complaint[]
+  correctiveActions     CorrectiveAction[]
+  incidents             Incident[]
+
+  invoices              Invoice[]
+  invoiceItems          InvoiceItem[]
+  payments              Payment[]
+  taxRates              TaxRate[]
+
+  attachments           Attachment[]
+  comments              Comment[]
+  auditLogs             AuditLog[]
+  systemSettings        SystemSetting[]
+  backgroundJobs        BackgroundJob[]
+
+  @@index([ownerId])
+  @@index([isActive])
+}
+
+model WorkspaceMembership {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  userId       String
+  role         WorkspaceRole @default(MEMBER)
+  joinedAt     DateTime      @default(now())
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId, role])
+}
+
+model Role {
+  id           String           @id @default(cuid())
+  workspaceId  String
+  name         String
+  description  String?
+  isSystem     Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  permissions  RolePermission[]
+  userRoles    UserRole[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  group       String?
+  description String?
+  createdAt   DateTime         @default(now())
+  roles       RolePermission[]
+
+  @@index([group])
+}
+
+model RolePermission {
+  id            String      @id @default(cuid())
+  roleId        String
+  permissionId  String
+  role          Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model UserRole {
+  id           String      @id @default(cuid())
+  workspaceId  String
+  userId       String
+  roleId       String
+  createdAt    DateTime    @default(now())
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+// =============================
+// CUSTOMERS AND FACILITIES
+// =============================
+
+model Customer {
+  id                String            @id @default(cuid())
+  workspaceId       String
+  code              String?
+  name              String
+  type              CustomerType      @default(COMPANY)
+  status            CustomerStatus    @default(ACTIVE)
+  industry          String?
+  taxId             String?
+  billingEmail      String?
+  phone             String?
+  website           String?
+  addressLine1      String?
+  addressLine2      String?
+  city              String?
+  state             String?
+  postalCode        String?
+  country           String?
+  notes             String?           @db.Text
+  deletedAt         DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  workspace         Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts          CustomerContact[]
+  facilities        Facility[]
+  contracts         Contract[]
+  serviceRequests   ServiceRequest[]
+  workOrders        WorkOrder[]
+  conversations     Conversation[]
+  feedbacks         CustomerFeedback[]
+  complaints        Complaint[]
+  incidents         Incident[]
+  invoices          Invoice[]
+  payments          Payment[]
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId, status])
+  @@index([name])
+}
+
+model CustomerContact {
+  id                         String                    @id @default(cuid())
+  workspaceId                 String
+  customerId                  String
+  userId                      String?                   @unique
+  firstName                   String
+  lastName                    String
+  email                       String?
+  phone                       String?
+  title                       String?
+  role                        ContactRole               @default(FACILITY_REPRESENTATIVE)
+  isPrimary                   Boolean                   @default(false)
+  canLogin                    Boolean                   @default(false)
+  notes                       String?                   @db.Text
+  createdAt                   DateTime                  @default(now())
+  updatedAt                   DateTime                  @updatedAt
+
+  workspace                   Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer                    Customer                  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user                        User?                     @relation("CustomerContactUser", fields: [userId], references: [id], onDelete: SetNull)
+  facilityContacts            FacilityContact[]
+  requestedServiceRequests    ServiceRequest[]          @relation("ServiceRequestRequestedByContact")
+  conversationParticipants    ConversationParticipant[]
+  sentMessages                Message[]                 @relation("MessageCustomerContactSender")
+  notifications               Notification[]
+  workOrderSignoffs           WorkOrderSignoff[]
+  feedbacks                   CustomerFeedback[]
+
+  @@index([workspaceId, customerId])
+  @@index([email])
+  @@index([isPrimary])
+}
+
+model Facility {
+  id                String            @id @default(cuid())
+  workspaceId       String
+  customerId        String
+  code              String?
+  name              String
+  type              FacilityType      @default(OFFICE)
+  status            FacilityStatus    @default(ACTIVE)
+  addressLine1      String?
+  addressLine2      String?
+  city              String?
+  state             String?
+  postalCode        String?
+  country           String?
+  latitude          Decimal?          @db.Decimal(10, 7)
+  longitude         Decimal?          @db.Decimal(10, 7)
+  accessInstructions String?          @db.Text
+  notes             String?           @db.Text
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  workspace         Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer          Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  contacts          FacilityContact[]
+  contractFacilities ContractFacility[]
+  serviceRequests   ServiceRequest[]
+  workOrders        WorkOrder[]
+  shifts            Shift[]
+  conversations     Conversation[]
+  inspections       Inspection[]
+  feedbacks         CustomerFeedback[]
+  complaints        Complaint[]
+  incidents         Incident[]
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId, customerId])
+  @@index([status])
+}
+
+model FacilityContact {
+  id                 String          @id @default(cuid())
+  workspaceId         String
+  facilityId          String
+  customerContactId   String?
+  name                String
+  email               String?
+  phone               String?
+  role                ContactRole     @default(FACILITY_REPRESENTATIVE)
+  isPrimary           Boolean         @default(false)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  workspace           Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  facility            Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  customerContact     CustomerContact? @relation(fields: [customerContactId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, facilityId])
+  @@index([customerContactId])
+}
+
+// =============================
+// SERVICE CATALOG
+// =============================
+
+model ServiceCategory {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  name           String
+  description    String?
+  serviceLine    ServiceLine
+  isActive       Boolean       @default(true)
+  sortOrder      Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  services       Service[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, serviceLine, isActive])
+}
+
+model Service {
+  id                       String                @id @default(cuid())
+  workspaceId               String
+  categoryId                String?
+  code                      String?
+  name                      String
+  description               String?               @db.Text
+  serviceLine               ServiceLine
+  defaultUnit               ServiceUnit           @default(VISIT)
+  basePrice                 Decimal?              @db.Decimal(12, 2)
+  estimatedDurationMinutes  Int?
+  requiresInspection        Boolean               @default(true)
+  isBookableOnline          Boolean               @default(true)
+  isActive                  Boolean               @default(true)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+
+  workspace                 Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category                  ServiceCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  prices                    ServicePrice[]
+  requirements              ServiceRequirement[]
+  requestItems              ServiceRequestItem[]
+  contractServices          ContractService[]
+  invoiceItems              InvoiceItem[]
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId, serviceLine, isActive])
+  @@index([categoryId])
+}
+
+model ServicePrice {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  serviceId      String
+  name           String
+  unit           ServiceUnit   @default(VISIT)
+  amount         Decimal       @db.Decimal(12, 2)
+  currency       String        @default("USD")
+  minQuantity    Decimal?      @db.Decimal(10, 2)
+  maxQuantity    Decimal?      @db.Decimal(10, 2)
+  isDefault      Boolean       @default(false)
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  service        Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, serviceId, isActive])
+}
+
+model ServiceRequirement {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  serviceId      String
+  name           String
+  description    String?
+  isMandatory    Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  service        Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, serviceId])
+}
+
+model ServiceArea {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  name           String
+  city           String?
+  state          String?
+  postalCode     String?
+  country        String?
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+}
+
+// =============================
+// CONTRACTS
+// =============================
+
+model Contract {
+  id                   String              @id @default(cuid())
+  workspaceId           String
+  customerId            String
+  createdById           String?
+  contractNumber        String
+  title                 String
+  status                ContractStatus      @default(DRAFT)
+  startDate             DateTime
+  endDate               DateTime?
+  billingFrequency      BillingFrequency    @default(MONTHLY)
+  totalValue            Decimal?            @db.Decimal(14, 2)
+  currency              String              @default("USD")
+  renewalNoticeDays     Int                 @default(30)
+  signedAt              DateTime?
+  terms                 String?             @db.Text
+  notes                 String?             @db.Text
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  workspace             Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer              Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy             User?               @relation("ContractCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  facilities            ContractFacility[]
+  services              ContractService[]
+  schedules             ContractSchedule[]
+  serviceRequests       ServiceRequest[]
+  workOrders            WorkOrder[]
+  invoices              Invoice[]
+
+  @@unique([workspaceId, contractNumber])
+  @@index([workspaceId, status])
+  @@index([customerId, status])
+  @@index([endDate])
+}
+
+model ContractFacility {
+  id             String      @id @default(cuid())
+  workspaceId    String
+  contractId     String
+  facilityId     String
+  createdAt      DateTime    @default(now())
+
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contract       Contract    @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  facility       Facility    @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, facilityId])
+  @@index([workspaceId, facilityId])
+}
+
+model ContractService {
+  id             String       @id @default(cuid())
+  workspaceId    String
+  contractId     String
+  serviceId      String?
+  serviceLine    ServiceLine
+  name           String
+  description    String?      @db.Text
+  frequency      RecurrenceFrequency @default(WEEKLY)
+  quantity       Decimal      @default(1) @db.Decimal(10, 2)
+  unit           ServiceUnit  @default(VISIT)
+  price          Decimal?     @db.Decimal(12, 2)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contract       Contract     @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  service        Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, contractId])
+  @@index([serviceId])
+}
+
+model ContractSchedule {
+  id             String       @id @default(cuid())
+  workspaceId    String
+  contractId     String
+  serviceLine    ServiceLine
+  frequency      RecurrenceFrequency @default(WEEKLY)
+  dayOfWeek      Int?
+  dayOfMonth     Int?
+  startTime      String?
+  endTime        String?
+  timezone       String?
+  isActive       Boolean      @default(true)
+  notes          String?      @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contract       Contract     @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, contractId, isActive])
+}
+
+// =============================
+// SERVICE REQUESTS AND OPERATIONS
+// =============================
+
+model ServiceRequest {
+  id                    String                  @id @default(cuid())
+  workspaceId            String
+  requestNumber          String
+  customerId             String
+  facilityId             String?
+  contractId             String?
+  createdById            String?
+  requestedByContactId   String?
+  assignedManagerId      String?
+  title                  String
+  description            String?                 @db.Text
+  serviceLine            ServiceLine
+  priority               ServiceRequestPriority  @default(NORMAL)
+  status                 ServiceRequestStatus    @default(SUBMITTED)
+  requestedStartAt       DateTime?
+  requestedEndAt         DateTime?
+  preferredTimeWindow    String?
+  isRecurring            Boolean                 @default(false)
+  recurrenceRule         String?
+  estimatedAmount        Decimal?                @db.Decimal(12, 2)
+  approvedAt             DateTime?
+  cancelledAt            DateTime?
+  completedAt            DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  workspace              Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer               Customer                @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  facility               Facility?               @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  contract               Contract?               @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  createdBy              User?                   @relation("ServiceRequestCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  requestedByContact     CustomerContact?        @relation("ServiceRequestRequestedByContact", fields: [requestedByContactId], references: [id], onDelete: SetNull)
+  assignedManager        User?                   @relation("ServiceRequestAssignedManager", fields: [assignedManagerId], references: [id], onDelete: SetNull)
+
+  items                  ServiceRequestItem[]
+  statusHistory          ServiceRequestStatusHistory[]
+  workOrders             WorkOrder[]
+  conversations          Conversation[]
+  inspections            Inspection[]
+  feedbacks              CustomerFeedback[]
+  complaints             Complaint[]
+  invoices               Invoice[]
+
+  @@unique([workspaceId, requestNumber])
+  @@index([workspaceId, status, priority])
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([facilityId])
+  @@index([assignedManagerId])
+}
+
+model ServiceRequestItem {
+  id                       String         @id @default(cuid())
+  workspaceId               String
+  serviceRequestId          String
+  serviceId                 String?
+  serviceName               String
+  description               String?        @db.Text
+  quantity                  Decimal        @default(1) @db.Decimal(10, 2)
+  unit                      ServiceUnit    @default(VISIT)
+  estimatedDurationMinutes  Int?
+  unitPrice                 Decimal?       @db.Decimal(12, 2)
+  lineTotal                 Decimal?       @db.Decimal(12, 2)
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+
+  workspace                 Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serviceRequest            ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  service                   Service?       @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, serviceRequestId])
+  @@index([serviceId])
+}
+
+model ServiceRequestStatusHistory {
+  id                String               @id @default(cuid())
+  workspaceId        String
+  serviceRequestId   String
+  fromStatus         ServiceRequestStatus?
+  toStatus           ServiceRequestStatus
+  changedById        String?
+  note               String?              @db.Text
+  createdAt          DateTime             @default(now())
+
+  workspace          Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serviceRequest     ServiceRequest       @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  changedBy          User?                @relation("ServiceRequestStatusChanger", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, serviceRequestId, createdAt(sort: Desc)])
+  @@index([changedById])
+}
+
+model WorkOrder {
+  id                    String                    @id @default(cuid())
+  workspaceId            String
+  workOrderNumber        String
+  serviceRequestId       String?
+  contractId             String?
+  customerId             String
+  facilityId             String?
+  createdById            String?
+  supervisorEmployeeId   String?
+  title                  String
+  description            String?                   @db.Text
+  serviceLine            ServiceLine
+  priority               ServiceRequestPriority    @default(NORMAL)
+  status                 WorkOrderStatus           @default(CREATED)
+  scheduledStartAt       DateTime?
+  scheduledEndAt         DateTime?
+  startedAt              DateTime?
+  completedAt            DateTime?
+  customerApprovedAt     DateTime?
+  qaRequired             Boolean                   @default(true)
+  qaPassed               Boolean?
+  notes                  String?                   @db.Text
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+
+  workspace              Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serviceRequest         ServiceRequest?           @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  contract               Contract?                 @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  customer               Customer                  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  facility               Facility?                 @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  createdBy              User?                     @relation("WorkOrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  supervisor             Employee?                 @relation("WorkOrderSupervisor", fields: [supervisorEmployeeId], references: [id], onDelete: SetNull)
+
+  tasks                  WorkOrderTask[]
+  assignments            WorkOrderAssignment[]
+  statusHistory          WorkOrderStatusHistory[]
+  photos                 WorkOrderPhoto[]
+  signoffs               WorkOrderSignoff[]
+  shifts                 Shift[]
+  attendanceRecords      Attendance[]
+  conversations          Conversation[]
+  inspections            Inspection[]
+  feedbacks              CustomerFeedback[]
+  complaints             Complaint[]
+  incidents              Incident[]
+  invoiceItems           InvoiceItem[]
+  correctiveActions      CorrectiveAction[]
+
+  @@unique([workspaceId, workOrderNumber])
+  @@index([workspaceId, status, priority])
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([facilityId])
+  @@index([serviceRequestId])
+  @@index([scheduledStartAt])
+}
+
+model WorkOrderTask {
+  id                    String              @id @default(cuid())
+  workspaceId            String
+  workOrderId            String
+  title                  String
+  description            String?             @db.Text
+  status                 WorkOrderTaskStatus @default(TODO)
+  sortOrder              Int                 @default(0)
+  checklist              Json?
+  completedByEmployeeId  String?
+  completedAt            DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  workspace              Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workOrder              WorkOrder           @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  completedBy            Employee?           @relation("TaskCompletedByEmployee", fields: [completedByEmployeeId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, workOrderId, status])
+}
+
+model WorkOrderAssignment {
+  id              String                  @id @default(cuid())
+  workspaceId      String
+  workOrderId      String
+  employeeId       String
+  role            WorkOrderAssignmentRole @default(OTHER)
+  assignedAt       DateTime                @default(now())
+  acceptedAt       DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  notes            String?                 @db.Text
+
+  workspace        Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workOrder        WorkOrder               @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  employee         Employee                @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([workOrderId, employeeId, role])
+  @@index([workspaceId, employeeId, assignedAt(sort: Desc)])
+}
+
+model WorkOrderStatusHistory {
+  id            String            @id @default(cuid())
+  workspaceId    String
+  workOrderId    String
+  fromStatus     WorkOrderStatus?
+  toStatus       WorkOrderStatus
+  changedById    String?
+  note           String?           @db.Text
+  createdAt      DateTime          @default(now())
+
+  workspace      Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workOrder      WorkOrder         @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  changedBy      User?             @relation("WorkOrderStatusChanger", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, workOrderId, createdAt(sort: Desc)])
+  @@index([changedById])
+}
+
+model WorkOrderPhoto {
+  id                    String              @id @default(cuid())
+  workspaceId            String
+  workOrderId            String
+  uploadedByUserId       String?
+  uploadedByEmployeeId   String?
+  type                  WorkOrderPhotoType  @default(GENERAL)
+  url                   String
+  fileName              String?
+  mimeType              String?
+  sizeBytes             BigInt?
+  notes                 String?             @db.Text
+  createdAt             DateTime            @default(now())
+
+  workspace             Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workOrder             WorkOrder           @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  uploadedByUser        User?               @relation("WorkOrderPhotoUserUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  uploadedByEmployee    Employee?           @relation("WorkOrderPhotoEmployeeUploader", fields: [uploadedByEmployeeId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, workOrderId, type])
+}
+
+model WorkOrderSignoff {
+  id                    String           @id @default(cuid())
+  workspaceId            String
+  workOrderId            String
+  signedByContactId      String?
+  signedByName           String
+  signatureUrl           String?
+  rating                 Int?
+  comment                String?          @db.Text
+  signedAt               DateTime         @default(now())
+
+  workspace              Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workOrder              WorkOrder        @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  signedByContact        CustomerContact? @relation(fields: [signedByContactId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, workOrderId])
+}
+
+// =============================
+// STAFF AND SCHEDULING
+// =============================
+
+model Department {
+  id              String          @id @default(cuid())
+  workspaceId      String
+  name            String
+  type            DepartmentType  @default(OTHER)
+  description     String?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  positions       Position[]
+  employees       Employee[]
+  shifts          Shift[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, type, isActive])
+}
+
+model Position {
+  id              String       @id @default(cuid())
+  workspaceId      String
+  departmentId     String?
+  title           String
+  description     String?
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  department      Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  employees       Employee[]
+
+  @@unique([workspaceId, title])
+  @@index([departmentId])
+}
+
+model Employee {
+  id                         String                     @id @default(cuid())
+  workspaceId                 String
+  userId                      String?                    @unique
+  employeeNumber              String
+  departmentId                String?
+  positionId                  String?
+  firstName                   String
+  lastName                    String
+  email                       String?
+  phone                       String?
+  status                      EmployeeStatus             @default(ACTIVE)
+  employmentType              EmploymentType             @default(FULL_TIME)
+  hireDate                    DateTime?
+  terminationDate             DateTime?
+  hourlyRate                  Decimal?                   @db.Decimal(12, 2)
+  serviceLines                ServiceLine[]
+  notes                       String?                    @db.Text
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+
+  workspace                   Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user                        User?                      @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
+  department                  Department?                @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  position                    Position?                  @relation(fields: [positionId], references: [id], onDelete: SetNull)
+
+  skills                      EmployeeSkill[]
+  certifications              EmployeeCertification[]
+  emergencyContacts           EmployeeEmergencyContact[]
+  availabilities              EmployeeAvailability[]
+  shiftAssignments            ShiftAssignment[]
+  attendanceRecords           Attendance[]
+  leaveRequests               LeaveRequest[]
+  workOrderAssignments         WorkOrderAssignment[]
+  supervisedWorkOrders         WorkOrder[]                @relation("WorkOrderSupervisor")
+  completedTasks              WorkOrderTask[]             @relation("TaskCompletedByEmployee")
+  uploadedWorkOrderPhotos      WorkOrderPhoto[]           @relation("WorkOrderPhotoEmployeeUploader")
+  conversationParticipants     ConversationParticipant[]
+  sentMessages                Message[]                  @relation("MessageEmployeeSender")
+  notifications               Notification[]
+  conductedInspections         Inspection[]               @relation("InspectionEmployeeInspector")
+
+  @@unique([workspaceId, employeeNumber])
+  @@index([workspaceId, status])
+  @@index([departmentId])
+  @@index([email])
+}
+
+model Skill {
+  id              String          @id @default(cuid())
+  workspaceId      String
+  name            String
+  description     String?
+  serviceLine     ServiceLine?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employees       EmployeeSkill[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, serviceLine])
+}
+
+model EmployeeSkill {
+  id              String       @id @default(cuid())
+  workspaceId      String
+  employeeId       String
+  skillId          String
+  level           Int?         // 1-5
+  createdAt       DateTime     @default(now())
+
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employee        Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  skill           Skill        @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, skillId])
+  @@index([workspaceId, skillId])
+}
+
+model Certification {
+  id              String                  @id @default(cuid())
+  workspaceId      String
+  name            String
+  description     String?
+  serviceLine     ServiceLine?
+  expires         Boolean                 @default(false)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  workspace       Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employees       EmployeeCertification[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, serviceLine])
+}
+
+model EmployeeCertification {
+  id                  String         @id @default(cuid())
+  workspaceId          String
+  employeeId           String
+  certificationId      String
+  certificateNumber    String?
+  issuedAt             DateTime?
+  expiresAt            DateTime?
+  documentUrl          String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  workspace            Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employee             Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  certification        Certification  @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, certificationId, certificateNumber])
+  @@index([workspaceId, expiresAt])
+}
+
+model EmployeeEmergencyContact {
+  id              String       @id @default(cuid())
+  workspaceId      String
+  employeeId       String
+  name            String
+  relationship    String?
+  phone           String
+  email           String?
+  isPrimary       Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employee        Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, employeeId])
+}
+
+model EmployeeAvailability {
+  id              String       @id @default(cuid())
+  workspaceId      String
+  employeeId       String
+  dayOfWeek        Int         // 0=Sunday, 6=Saturday
+  startTime        String
+  endTime          String
+  isAvailable      Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  workspace        Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employee         Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, employeeId, dayOfWeek])
+}
+
+model Shift {
+  id                   String          @id @default(cuid())
+  workspaceId           String
+  facilityId            String?
+  departmentId          String?
+  workOrderId           String?
+  serviceLine           ServiceLine
+  title                 String
+  status                ShiftStatus     @default(SCHEDULED)
+  startAt               DateTime
+  endAt                 DateTime
+  requiredStaffCount    Int             @default(1)
+  notes                 String?         @db.Text
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  workspace             Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  facility              Facility?       @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  department            Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  workOrder             WorkOrder?      @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  assignments           ShiftAssignment[]
+  attendanceRecords     Attendance[]
+
+  @@index([workspaceId, startAt, endAt])
+  @@index([facilityId])
+  @@index([departmentId])
+  @@index([workOrderId])
+}
+
+model ShiftAssignment {
+  id             String                  @id @default(cuid())
+  workspaceId     String
+  shiftId         String
+  employeeId      String
+  role           WorkOrderAssignmentRole @default(OTHER)
+  status         ShiftStatus             @default(SCHEDULED)
+  assignedAt      DateTime                @default(now())
+  confirmedAt     DateTime?
+  cancelledAt     DateTime?
+  notes           String?                 @db.Text
+
+  workspace       Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  shift           Shift                   @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  employee        Employee                @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, employeeId])
+  @@index([workspaceId, employeeId, assignedAt(sort: Desc)])
+}
+
+model Attendance {
+  id              String            @id @default(cuid())
+  workspaceId      String
+  employeeId       String
+  shiftId          String?
+  workOrderId      String?
+  date             DateTime
+  clockInAt        DateTime?
+  clockOutAt       DateTime?
+  clockInLatitude  Decimal?          @db.Decimal(10, 7)
+  clockInLongitude Decimal?          @db.Decimal(10, 7)
+  clockOutLatitude Decimal?          @db.Decimal(10, 7)
+  clockOutLongitude Decimal?         @db.Decimal(10, 7)
+  status           AttendanceStatus  @default(PRESENT)
+  notes            String?           @db.Text
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employee         Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  shift            Shift?            @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  workOrder        WorkOrder?        @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, date])
+  @@index([employeeId, date])
+  @@index([shiftId])
+  @@index([workOrderId])
+}
+
+model LeaveRequest {
+  id              String       @id @default(cuid())
+  workspaceId      String
+  employeeId       String
+  type            LeaveType
+  status          LeaveStatus  @default(REQUESTED)
+  startDate       DateTime
+  endDate         DateTime
+  reason          String?      @db.Text
+  reviewedById    String?
+  reviewedAt      DateTime?
+  reviewNote      String?      @db.Text
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employee        Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewedBy      User?        @relation("LeaveRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status, startDate])
+  @@index([employeeId, startDate])
+}
+
+// =============================
+// COMMUNICATION AND NOTIFICATIONS
+// =============================
+
+model Conversation {
+  id                String            @id @default(cuid())
+  workspaceId        String
+  type              ConversationType  @default(GENERAL)
+  customerId         String?
+  facilityId         String?
+  serviceRequestId   String?
+  workOrderId        String?
+  title             String?
+  isClosed          Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  workspace         Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer          Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  facility          Facility?         @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  serviceRequest    ServiceRequest?   @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  workOrder         WorkOrder?        @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  participants      ConversationParticipant[]
+  messages          Message[]
+
+  @@index([workspaceId, type, updatedAt(sort: Desc)])
+  @@index([customerId])
+  @@index([serviceRequestId])
+  @@index([workOrderId])
+}
+
+model ConversationParticipant {
+  id                  String                      @id @default(cuid())
+  workspaceId          String
+  conversationId       String
+  userId              String?
+  employeeId          String?
+  customerContactId   String?
+  type                ConversationParticipantType
+  displayName         String
+  lastReadAt          DateTime?
+  createdAt           DateTime                    @default(now())
+
+  workspace           Workspace                   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversation         Conversation                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user                User?                       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  employee            Employee?                   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  customerContact     CustomerContact?            @relation(fields: [customerContactId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, conversationId])
+  @@index([userId])
+  @@index([employeeId])
+  @@index([customerContactId])
+}
+
+model Message {
+  id                      String             @id @default(cuid())
+  workspaceId              String
+  conversationId           String
+  senderUserId             String?
+  senderEmployeeId         String?
+  senderCustomerContactId  String?
+  senderName               String
+  body                     String             @db.Text
+  visibility               MessageVisibility  @default(CLIENT_VISIBLE)
+  metadata                 Json?
+  deletedAt                DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  workspace                Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversation             Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderUser               User?              @relation("MessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+  senderEmployee           Employee?          @relation("MessageEmployeeSender", fields: [senderEmployeeId], references: [id], onDelete: SetNull)
+  senderCustomerContact    CustomerContact?   @relation("MessageCustomerContactSender", fields: [senderCustomerContactId], references: [id], onDelete: SetNull)
+  attachments              MessageAttachment[]
+
+  @@index([workspaceId, conversationId, createdAt(sort: Desc)])
+  @@index([senderUserId])
+  @@index([deletedAt])
+}
+
+model MessageAttachment {
+  id              String       @id @default(cuid())
+  workspaceId      String
+  messageId        String
+  url             String
+  fileName        String
+  mimeType        String?
+  sizeBytes       BigInt?
+  createdAt       DateTime     @default(now())
+
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  message         Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, messageId])
+}
+
+model Notification {
+  id                    String              @id @default(cuid())
+  workspaceId            String
+  userId                 String?
+  employeeId             String?
+  customerContactId      String?
+  type                  NotificationType
+  channel               NotificationChannel @default(IN_APP)
+  status                NotificationStatus  @default(UNREAD)
+  title                 String
+  body                  String?             @db.Text
+  entityType            AttachmentEntityType?
+  entityId              String?
+  readAt                DateTime?
+  createdAt             DateTime            @default(now())
+
+  workspace             Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user                  User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employee              Employee?           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  customerContact       CustomerContact?    @relation(fields: [customerContactId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status, createdAt(sort: Desc)])
+  @@index([userId, status])
+  @@index([employeeId, status])
+  @@index([customerContactId, status])
+}
+
+// =============================
+// QUALITY ASSURANCE
+// =============================
+
+model InspectionTemplate {
+  id              String                   @id @default(cuid())
+  workspaceId      String
+  name            String
+  description     String?                  @db.Text
+  serviceLine     ServiceLine
+  isActive        Boolean                  @default(true)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  workspace       Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  items           InspectionTemplateItem[]
+  inspections     Inspection[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, serviceLine, isActive])
+}
+
+model InspectionTemplateItem {
+  id              String                @id @default(cuid())
+  workspaceId      String
+  templateId       String
+  question        String
+  instructions    String?               @db.Text
+  isRequired      Boolean               @default(true)
+  sortOrder       Int                   @default(0)
+  weight          Decimal?              @db.Decimal(6, 2)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  workspace       Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template        InspectionTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  results         InspectionItemResult[]
+
+  @@index([workspaceId, templateId, sortOrder])
+}
+
+model Inspection {
+  id                    String             @id @default(cuid())
+  workspaceId            String
+  templateId             String?
+  workOrderId            String?
+  serviceRequestId       String?
+  facilityId             String?
+  createdById            String?
+  inspectorEmployeeId    String?
+  status                 InspectionStatus   @default(DRAFT)
+  score                  Decimal?           @db.Decimal(6, 2)
+  passed                 Boolean?
+  startedAt              DateTime?
+  completedAt            DateTime?
+  notes                  String?            @db.Text
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  workspace              Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template               InspectionTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  workOrder              WorkOrder?         @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  serviceRequest         ServiceRequest?    @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  facility               Facility?          @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  createdBy              User?              @relation("InspectionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  inspectorEmployee      Employee?          @relation("InspectionEmployeeInspector", fields: [inspectorEmployeeId], references: [id], onDelete: SetNull)
+  itemResults            InspectionItemResult[]
+  correctiveActions      CorrectiveAction[]
+
+  @@index([workspaceId, status, createdAt(sort: Desc)])
+  @@index([workOrderId])
+  @@index([facilityId])
+}
+
+model InspectionItemResult {
+  id                  String                     @id @default(cuid())
+  workspaceId          String
+  inspectionId         String
+  templateItemId       String?
+  question             String
+  result               InspectionItemResultValue @default(NA)
+  score                Decimal?                  @db.Decimal(6, 2)
+  notes                String?                   @db.Text
+  photoUrl             String?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  workspace            Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inspection           Inspection                @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  templateItem         InspectionTemplateItem?    @relation(fields: [templateItemId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, inspectionId])
+  @@index([templateItemId])
+}
+
+model CustomerFeedback {
+  id                    String           @id @default(cuid())
+  workspaceId            String
+  customerId             String
+  facilityId             String?
+  serviceRequestId       String?
+  workOrderId            String?
+  customerContactId      String?
+  createdByUserId        String?
+  rating                 Int
+  comment                String?          @db.Text
+  createdAt              DateTime         @default(now())
+
+  workspace              Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer               Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  facility               Facility?        @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  serviceRequest         ServiceRequest?  @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  workOrder              WorkOrder?       @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  customerContact        CustomerContact? @relation(fields: [customerContactId], references: [id], onDelete: SetNull)
+  createdByUser          User?            @relation("FeedbackCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, customerId, createdAt(sort: Desc)])
+  @@index([workOrderId])
+}
+
+model Complaint {
+  id                    String                  @id @default(cuid())
+  workspaceId            String
+  customerId             String
+  facilityId             String?
+  serviceRequestId       String?
+  workOrderId            String?
+  createdById            String?
+  assignedToId           String?
+  status                 ComplaintStatus         @default(OPEN)
+  priority               ServiceRequestPriority  @default(NORMAL)
+  title                  String
+  description            String                  @db.Text
+  resolution             String?                 @db.Text
+  dueAt                  DateTime?
+  resolvedAt             DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  workspace              Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer               Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  facility               Facility?               @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  serviceRequest         ServiceRequest?         @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  workOrder              WorkOrder?              @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  createdBy              User?                   @relation("ComplaintCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  assignedTo             User?                   @relation("ComplaintAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  correctiveActions      CorrectiveAction[]
+
+  @@index([workspaceId, status, priority])
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([assignedToId])
+}
+
+model CorrectiveAction {
+  id              String                 @id @default(cuid())
+  workspaceId      String
+  complaintId      String?
+  inspectionId     String?
+  workOrderId      String?
+  createdById      String?
+  assignedToId     String?
+  status          CorrectiveActionStatus @default(OPEN)
+  title           String
+  description     String?                @db.Text
+  dueAt           DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  workspace       Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  complaint       Complaint?             @relation(fields: [complaintId], references: [id], onDelete: SetNull)
+  inspection      Inspection?            @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+  workOrder       WorkOrder?             @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  createdBy       User?                  @relation("CorrectiveActionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  assignedTo      User?                  @relation("CorrectiveActionAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status, dueAt])
+  @@index([assignedToId])
+}
+
+model Incident {
+  id              String             @id @default(cuid())
+  workspaceId      String
+  customerId       String?
+  facilityId       String?
+  workOrderId      String?
+  reportedById     String?
+  assignedToId     String?
+  type            IncidentType       @default(OTHER)
+  severity        IncidentSeverity   @default(MEDIUM)
+  status          IncidentStatus     @default(OPEN)
+  title           String
+  description     String             @db.Text
+  occurredAt      DateTime?
+  resolvedAt      DateTime?
+  resolution      String?            @db.Text
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer        Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  facility        Facility?          @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  workOrder       WorkOrder?         @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  reportedBy      User?              @relation("IncidentReporter", fields: [reportedById], references: [id], onDelete: SetNull)
+  assignedTo      User?              @relation("IncidentAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status, severity])
+  @@index([facilityId, occurredAt])
+}
+
+// =============================
+// BILLING
+// =============================
+
+model Invoice {
+  id                String          @id @default(cuid())
+  workspaceId        String
+  customerId         String
+  contractId         String?
+  serviceRequestId   String?
+  createdById        String?
+  invoiceNumber      String
+  status             InvoiceStatus   @default(DRAFT)
+  issueDate          DateTime        @default(now())
+  dueDate            DateTime?
+  currency           String          @default("USD")
+  subtotal           Decimal         @default(0) @db.Decimal(14, 2)
+  taxTotal           Decimal         @default(0) @db.Decimal(14, 2)
+  discountTotal      Decimal         @default(0) @db.Decimal(14, 2)
+  total              Decimal         @default(0) @db.Decimal(14, 2)
+  amountPaid         Decimal         @default(0) @db.Decimal(14, 2)
+  balanceDue         Decimal         @default(0) @db.Decimal(14, 2)
+  notes              String?         @db.Text
+  sentAt             DateTime?
+  paidAt             DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer           Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  contract           Contract?       @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  serviceRequest     ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  createdBy          User?           @relation("InvoiceCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  items              InvoiceItem[]
+  payments           Payment[]
+
+  @@unique([workspaceId, invoiceNumber])
+  @@index([workspaceId, status, dueDate])
+  @@index([customerId, issueDate(sort: Desc)])
+}
+
+model InvoiceItem {
+  id              String       @id @default(cuid())
+  workspaceId      String
+  invoiceId        String
+  workOrderId      String?
+  serviceId        String?
+  description      String
+  quantity         Decimal     @default(1) @db.Decimal(10, 2)
+  unit             ServiceUnit @default(VISIT)
+  unitPrice        Decimal     @default(0) @db.Decimal(12, 2)
+  taxRate          Decimal?    @db.Decimal(6, 3)
+  lineTotal        Decimal     @default(0) @db.Decimal(14, 2)
+  createdAt        DateTime    @default(now())
+
+  workspace        Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invoice          Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  workOrder        WorkOrder?  @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  service          Service?    @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, invoiceId])
+  @@index([workOrderId])
+  @@index([serviceId])
+}
+
+model Payment {
+  id              String            @id @default(cuid())
+  workspaceId      String
+  customerId       String
+  invoiceId        String?
+  receivedById     String?
+  paymentNumber    String?
+  method           PaymentMethodType @default(OTHER)
+  status           PaymentStatus     @default(PENDING)
+  amount           Decimal           @db.Decimal(14, 2)
+  currency         String            @default("USD")
+  paidAt           DateTime?
+  reference        String?
+  notes            String?           @db.Text
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoice          Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  receivedBy       User?             @relation("PaymentReceiver", fields: [receivedById], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, paymentNumber])
+  @@index([workspaceId, status, paidAt])
+  @@index([customerId, paidAt(sort: Desc)])
+  @@index([invoiceId])
+}
+
+model TaxRate {
+  id             String      @id @default(cuid())
+  workspaceId    String
+  name           String
+  type           TaxType     @default(PERCENTAGE)
+  rate           Decimal     @db.Decimal(8, 4)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, isActive])
+}
+
+// =============================
+// SHARED ADMIN, FILES, AUDIT
+// =============================
+
+model Attachment {
+  id              String                @id @default(cuid())
+  workspaceId      String
+  uploadedById     String?
+  entityType       AttachmentEntityType
+  entityId         String
+  documentType     DocumentType          @default(OTHER)
+  url             String
+  fileName        String
+  mimeType        String?
+  sizeBytes       BigInt?
+  description     String?               @db.Text
+  createdAt       DateTime              @default(now())
+
+  workspace       Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploadedBy      User?                 @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, entityType, entityId])
+  @@index([uploadedById, createdAt(sort: Desc)])
+}
+
+model Comment {
+  id              String                @id @default(cuid())
+  workspaceId      String
+  authorUserId     String?
+  entityType       AttachmentEntityType
+  entityId         String
+  body            String                @db.Text
+  internalOnly     Boolean              @default(false)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  workspace       Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author          User?                 @relation("CommentAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, entityType, entityId, createdAt(sort: Desc)])
+  @@index([authorUserId])
+}
+
+model AuditLog {
+  id              String        @id @default(cuid())
+  workspaceId      String?
+  actorUserId      String?
+  action          String
+  entityType      String
+  entityId        String?
+  oldValues       Json?
+  newValues       Json?
+  metadata        Json?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime      @default(now())
+
+  workspace       Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  actor           User?         @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([actorUserId, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+}
+
+model SystemSetting {
+  id              String       @id @default(cuid())
+  workspaceId      String
+  key             String
+  value           Json
+  category        String?
+  description     String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId, category])
+}
+
+model BackgroundJob {
+  id              String              @id @default(cuid())
+  workspaceId      String?
+  type            BackgroundJobType
+  status          BackgroundJobStatus @default(QUEUED)
+  payload         Json
+  attempts        Int                 @default(0)
+  maxAttempts     Int                 @default(10)
+  runAt           DateTime            @default(now())
+  lockedAt        DateTime?
+  finishedAt      DateTime?
+  lastError       String?             @db.Text
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  workspace       Workspace?          @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([status, runAt])
+  @@index([workspaceId, createdAt(sort: Desc)])
+}
