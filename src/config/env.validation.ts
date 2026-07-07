@@ -18,6 +18,8 @@ export function validateEnv(config: EnvInput) {
     JWT_REFRESH_SECRET: config.JWT_REFRESH_SECRET,
     JWT_REFRESH_TTL_DAYS: Number(config.JWT_REFRESH_TTL_DAYS ?? 30),
     PASSWORD_RESET_TTL_MINUTES: Number(config.PASSWORD_RESET_TTL_MINUTES ?? 30),
+    RATE_LIMIT_WINDOW_MS: Number(config.RATE_LIMIT_WINDOW_MS ?? 60_000),
+    RATE_LIMIT_MAX: Number(config.RATE_LIMIT_MAX ?? 600),
     AWS_REGION: config.AWS_REGION ?? config.S3_REGION,
     AWS_S3_BUCKET: config.AWS_S3_BUCKET ?? config.S3_BUCKET,
     AWS_ACCESS_KEY_ID: config.AWS_ACCESS_KEY_ID ?? config.S3_ACCESS_KEY_ID,
