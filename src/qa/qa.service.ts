@@ -102,6 +102,13 @@ export class QaService {
     });
   }
 
+  getInspection(workspaceId: string, id: string) {
+    return this.prisma.inspection.findFirstOrThrow({
+      where: { id, workspaceId },
+      include: this.inspectionInclude(true),
+    });
+  }
+
   async updateInspection(workspaceId: string, id: string, dto: UpdateInspectionDto) {
     await this.assertOptionalRelations(workspaceId, dto);
     return this.prisma.inspection.update({

@@ -54,6 +54,13 @@ export class IssuesService {
     });
   }
 
+  getComplaint(workspaceId: string, id: string) {
+    return this.prisma.complaint.findFirstOrThrow({
+      where: { id, workspaceId },
+      include: this.complaintInclude(),
+    });
+  }
+
   updateComplaint(workspaceId: string, id: string, dto: UpdateComplaintDto) {
     return this.prisma.complaint.update({
       where: { id, workspaceId },
@@ -149,6 +156,13 @@ export class IssuesService {
         title: dto.title.trim(),
         occurredAt: dto.occurredAt ? new Date(dto.occurredAt) : undefined,
       },
+      include: this.incidentInclude(),
+    });
+  }
+
+  getIncident(workspaceId: string, id: string) {
+    return this.prisma.incident.findFirstOrThrow({
+      where: { id, workspaceId },
       include: this.incidentInclude(),
     });
   }

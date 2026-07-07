@@ -45,6 +45,11 @@ export class SchedulingController {
     return this.schedulingService.createShift(request.workspaceId, dto);
   }
 
+  @Get("shifts/:id")
+  getShift(@Req() request: WorkspaceRequest, @Param("id") id: string) {
+    return this.schedulingService.getShift(request.workspaceId, id);
+  }
+
   @Patch("shifts/:id")
   updateShift(@Req() request: WorkspaceRequest, @Param("id") id: string, @Body() dto: UpdateShiftDto) {
     return this.schedulingService.updateShift(request.workspaceId, id, dto);

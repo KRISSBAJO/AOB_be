@@ -197,6 +197,12 @@ export class WorkforceService {
     await this.assertDepartment(workspaceId, dto.departmentId);
     await this.assertPosition(workspaceId, dto.positionId);
     this.assertEmploymentDates(dto.hireDate, dto.terminationDate);
+    const email = dto.email?.trim().toLowerCase();
+    const userId = await this.resolveEmployeeUserId(
+      workspaceId,
+      dto.userId,
+      email,
+    );
 
     return this.prisma.employee.create({
       data: {
@@ -204,12 +210,12 @@ export class WorkforceService {
         employeeNumber:
           dto.employeeNumber?.trim() ||
           (await this.generateEmployeeNumber(workspaceId)),
-        userId: dto.userId,
+        userId,
         departmentId: dto.departmentId,
         positionId: dto.positionId,
         firstName: dto.firstName.trim(),
         lastName: dto.lastName.trim(),
-        email: dto.email?.trim().toLowerCase(),
+        email,
         phone: dto.phone?.trim(),
         status: dto.status,
         employmentType: dto.employmentType,
@@ -241,20 +247,29 @@ export class WorkforceService {
     id: string,
     dto: UpdateEmployeeDto,
   ) {
+    const current = await this.prisma.employee.findFirstOrThrow({
+      where: { id, workspaceId },
+      select: { id: true, userId: true },
+    });
     await this.assertDepartment(workspaceId, dto.departmentId);
     await this.assertPosition(workspaceId, dto.positionId);
     this.assertEmploymentDates(dto.hireDate, dto.terminationDate);
+    const email = dto.email?.trim().toLowerCase();
+    const userId =
+      dto.userId !== undefined || (!current.userId && email)
+        ? await this.resolveEmployeeUserId(workspaceId, dto.userId, email, id)
+        : undefined;
 
     return this.prisma.employee.update({
       where: { id, workspaceId },
       data: {
         employeeNumber: dto.employeeNumber?.trim(),
-        userId: dto.userId,
+        userId,
         departmentId: dto.departmentId,
         positionId: dto.positionId,
         firstName: dto.firstName?.trim(),
         lastName: dto.lastName?.trim(),
-        email: dto.email?.trim().toLowerCase(),
+        email,
         phone: dto.phone?.trim(),
         status: dto.status,
         employmentType: dto.employmentType,
@@ -359,6 +374,85 @@ export class WorkforceService {
     await this.prisma.employee.findFirstOrThrow({
       where: { id: employeeId, workspaceId },
     });
+  }
+
+  private async resolveEmployeeUserId(
+    workspaceId: string,
+    explicitUserId?: string,
+    email?: string,
+    employeeId?: string,
+  ) {
+    const candidateUserId = explicitUserId?.trim();
+
+    if (candidateUserId) {
+      await this.assertWorkspaceUser(workspaceId, candidateUserId);
+      await this.assertUserNotLinked(candidateUserId, employeeId);
+      return candidateUserId;
+    }
+
+    if (!email) {
+      return undefined;
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return undefined;
+    }
+
+    const membership = await this.prisma.workspaceMembership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId: user.id,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!membership) {
+      return undefined;
+    }
+
+    await this.assertUserNotLinked(user.id, employeeId);
+    return user.id;
+  }
+
+  private async assertWorkspaceUser(workspaceId: string, userId: string) {
+    const membership = await this.prisma.workspaceMembership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!membership) {
+      throw new BadRequestException(
+        "User must belong to this workspace before linking employee profile",
+      );
+    }
+  }
+
+  private async assertUserNotLinked(userId: string, employeeId?: string) {
+    const existing = await this.prisma.employee.findFirst({
+      where: {
+        userId,
+        ...(employeeId ? { id: { not: employeeId } } : {}),
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        "This user is already linked to another employee profile",
+      );
+    }
   }
 
   private assertEmploymentDates(hireDate?: string, terminationDate?: string) {

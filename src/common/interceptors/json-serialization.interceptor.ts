@@ -20,7 +20,7 @@ export class JsonSerializationInterceptor implements NestInterceptor {
       return value;
     }
 
-    if (value.constructor?.name === "Decimal" && "toString" in value) {
+    if (this.isDecimalLike(value)) {
       return String(value);
     }
 
@@ -31,5 +31,27 @@ export class JsonSerializationInterceptor implements NestInterceptor {
       ]),
     );
   }
-}
 
+  private isDecimalLike(value: object) {
+    if (
+      value.constructor?.name === "Decimal" &&
+      "toString" in value &&
+      typeof value.toString === "function"
+    ) {
+      return true;
+    }
+
+    const maybeDecimal = value as Record<string, unknown>;
+    const hasCustomToString =
+      "toString" in value &&
+      typeof value.toString === "function" &&
+      value.toString !== Object.prototype.toString;
+
+    return (
+      hasCustomToString &&
+      typeof maybeDecimal.s === "number" &&
+      typeof maybeDecimal.e === "number" &&
+      Array.isArray(maybeDecimal.d)
+    );
+  }
+}

@@ -67,6 +67,11 @@ export class QaController {
     return this.qaService.createInspection(request.workspaceId, user, dto);
   }
 
+  @Get("inspections/:id")
+  getInspection(@Req() request: WorkspaceRequest, @Param("id") id: string) {
+    return this.qaService.getInspection(request.workspaceId, id);
+  }
+
   @Patch("inspections/:id")
   updateInspection(@Req() request: WorkspaceRequest, @Param("id") id: string, @Body() dto: UpdateInspectionDto) {
     return this.qaService.updateInspection(request.workspaceId, id, dto);

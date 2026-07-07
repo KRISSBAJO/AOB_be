@@ -38,6 +38,11 @@ export class IssuesController {
     return this.issuesService.createComplaint(request.workspaceId, user, dto);
   }
 
+  @Get("complaints/:id")
+  getComplaint(@Req() request: WorkspaceRequest, @Param("id") id: string) {
+    return this.issuesService.getComplaint(request.workspaceId, id);
+  }
+
   @Patch("complaints/:id")
   updateComplaint(@Req() request: WorkspaceRequest, @Param("id") id: string, @Body() dto: UpdateComplaintDto) {
     return this.issuesService.updateComplaint(request.workspaceId, id, dto);
@@ -75,6 +80,11 @@ export class IssuesController {
   @Post("incidents")
   createIncident(@Req() request: WorkspaceRequest, @CurrentUser() user: AuthenticatedUser, @Body() dto: CreateIncidentDto) {
     return this.issuesService.createIncident(request.workspaceId, user, dto);
+  }
+
+  @Get("incidents/:id")
+  getIncident(@Req() request: WorkspaceRequest, @Param("id") id: string) {
+    return this.issuesService.getIncident(request.workspaceId, id);
   }
 
   @Patch("incidents/:id")

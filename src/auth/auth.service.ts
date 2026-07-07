@@ -5,7 +5,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
-import { WorkspaceRole } from "@prisma/client";
+import { EmploymentType, ServiceLine, WorkspaceRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 
 import { toSlug } from "../common/utils/slug";
@@ -86,6 +86,20 @@ export class AuthService {
           workspaceId: workspace.id,
           userId: user.id,
           roleId: ownerRole.id,
+        },
+      });
+
+      await tx.employee.create({
+        data: {
+          workspaceId: workspace.id,
+          userId: user.id,
+          employeeNumber: "EMP-00001",
+          ...this.ownerEmployeeName(dto.displayName, email),
+          email,
+          phone: dto.phone,
+          employmentType: EmploymentType.FULL_TIME,
+          serviceLines: [ServiceLine.OTHER],
+          notes: "Workspace owner employee profile.",
         },
       });
 
@@ -372,5 +386,16 @@ export class AuthService {
     }
 
     return slug;
+  }
+
+  private ownerEmployeeName(displayName: string, email: string) {
+    const cleaned = displayName.trim();
+    const fallback = email.split("@")[0] || "Owner";
+    const [firstName, ...lastNameParts] = cleaned ? cleaned.split(/\s+/) : [fallback];
+
+    return {
+      firstName: firstName || fallback,
+      lastName: lastNameParts.join(" ") || "Owner",
+    };
   }
 }

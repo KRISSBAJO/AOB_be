@@ -70,6 +70,13 @@ export class SchedulingService {
     });
   }
 
+  getShift(workspaceId: string, id: string) {
+    return this.prisma.shift.findFirstOrThrow({
+      where: { id, workspaceId },
+      include: this.shiftInclude(),
+    });
+  }
+
   async updateShift(workspaceId: string, id: string, dto: UpdateShiftDto) {
     const current = await this.prisma.shift.findFirstOrThrow({ where: { id, workspaceId } });
     this.assertDateRange(dto.startAt ?? current.startAt.toISOString(), dto.endAt ?? current.endAt.toISOString());

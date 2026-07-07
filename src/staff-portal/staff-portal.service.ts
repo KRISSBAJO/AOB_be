@@ -6,10 +6,12 @@ import {
 import {
   AttendanceStatus,
   EmployeeStatus,
+  EmploymentType,
   NotificationChannel,
   NotificationType,
   Prisma,
   ServiceRequestStatus,
+  ServiceLine,
   ShiftStatus,
   WorkOrderPhotoType,
   WorkOrderStatus,
@@ -418,6 +420,12 @@ export class StaffPortalService {
     });
 
     if (!byEmail) {
+      const ownerProfile = await this.createOwnerEmployeeIfNeeded(workspaceId, user);
+
+      if (ownerProfile) {
+        return ownerProfile;
+      }
+
       throw new ForbiddenException(
         "Your user account is not linked to an active employee profile",
       );
@@ -437,6 +445,51 @@ export class StaffPortalService {
     }
 
     return byEmail;
+  }
+
+  private async createOwnerEmployeeIfNeeded(
+    workspaceId: string,
+    user: AuthenticatedUser,
+  ): Promise<StaffEmployee | null> {
+    const workspace = await this.prisma.workspace.findFirst({
+      where: { id: workspaceId, ownerId: user.id, isActive: true },
+      select: { id: true },
+    });
+
+    if (!workspace) {
+      return null;
+    }
+
+    const current = await this.prisma.employee.findFirst({
+      where: { workspaceId, userId: user.id },
+      include: this.employeeInclude(),
+    });
+
+    if (current) {
+      return current;
+    }
+
+    const fullUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { displayName: true, phone: true },
+    });
+    const employeeNumber = await this.generateEmployeeNumber(workspaceId);
+    const name = this.ownerEmployeeName(fullUser?.displayName ?? user.email, user.email);
+
+    return this.prisma.employee.create({
+      data: {
+        workspaceId,
+        userId: user.id,
+        employeeNumber,
+        ...name,
+        email: user.email,
+        phone: fullUser?.phone,
+        employmentType: EmploymentType.FULL_TIME,
+        serviceLines: [ServiceLine.OTHER],
+        notes: "Workspace owner employee profile.",
+      },
+      include: this.employeeInclude(),
+    });
   }
 
   private employeeInclude() {
@@ -656,5 +709,21 @@ export class StaffPortalService {
   private clean(value?: string | null) {
     const cleaned = value?.trim();
     return cleaned ? cleaned : undefined;
+  }
+
+  private ownerEmployeeName(displayName: string, email: string) {
+    const cleaned = displayName.trim();
+    const fallback = email.split("@")[0] || "Owner";
+    const [firstName, ...lastNameParts] = cleaned ? cleaned.split(/\s+/) : [fallback];
+
+    return {
+      firstName: firstName || fallback,
+      lastName: lastNameParts.join(" ") || "Owner",
+    };
+  }
+
+  private async generateEmployeeNumber(workspaceId: string) {
+    const count = await this.prisma.employee.count({ where: { workspaceId } });
+    return `EMP-${String(count + 1).padStart(5, "0")}`;
   }
 }
