@@ -21,6 +21,11 @@ import { ServiceRequestsModule } from "./service-requests/service-requests.modul
 import { WorkOrdersModule } from "./work-orders/work-orders.module";
 import { WorkforceModule } from "./workforce/workforce.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
+import { QaModule } from "./qa/qa.module";
+import { IssuesModule } from "./issues/issues.module";
+import { CommunicationsModule } from "./communications/communications.module";
+import { BillingModule } from "./billing/billing.module";
+import { FilesModule } from "./files/files.module";
 
 @Module({
   imports: [
@@ -42,6 +47,11 @@ import { SchedulingModule } from "./scheduling/scheduling.module";
     WorkOrdersModule,
     WorkforceModule,
     SchedulingModule,
+    QaModule,
+    IssuesModule,
+    CommunicationsModule,
+    BillingModule,
+    FilesModule,
     ResourcesModule,
   ],
   providers: [
