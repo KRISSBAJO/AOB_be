@@ -31,6 +31,7 @@ import { FilesModule } from "./files/files.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { ReportsModule } from "./reports/reports.module";
 import { AdminModule } from "./admin/admin.module";
+import { JobsModule } from "./jobs/jobs.module";
 import { PublicBookingsModule } from "./public-bookings/public-bookings.module";
 import { StaffPortalModule } from "./staff-portal/staff-portal.module";
 
@@ -62,6 +63,7 @@ import { StaffPortalModule } from "./staff-portal/staff-portal.module";
     DashboardModule,
     ReportsModule,
     AdminModule,
+    JobsModule,
     PublicBookingsModule,
     StaffPortalModule,
     ResourcesModule,
