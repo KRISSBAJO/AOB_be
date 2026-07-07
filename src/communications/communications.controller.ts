@@ -32,41 +32,60 @@ export class CommunicationsController {
   constructor(private readonly communicationsService: CommunicationsService) {}
 
   @Get("conversations")
-  listConversations(@Req() request: WorkspaceRequest, @Query() query: ListConversationsQueryDto) {
-    return this.communicationsService.listConversations(request.workspaceId, query);
+  listConversations(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListConversationsQueryDto,
+  ) {
+    return this.communicationsService.listConversations(request.workspaceId, user, query);
   }
 
   @Post("conversations")
-  createConversation(@Req() request: WorkspaceRequest, @Body() dto: CreateConversationDto) {
-    return this.communicationsService.createConversation(request.workspaceId, dto);
+  createConversation(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateConversationDto,
+  ) {
+    return this.communicationsService.createConversation(request.workspaceId, user, dto);
   }
 
   @Get("conversations/:id")
-  getConversation(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.communicationsService.getConversation(request.workspaceId, id);
+  getConversation(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.communicationsService.getConversation(request.workspaceId, user, id);
   }
 
   @Patch("conversations/:id")
-  updateConversation(@Req() request: WorkspaceRequest, @Param("id") id: string, @Body() dto: UpdateConversationDto) {
-    return this.communicationsService.updateConversation(request.workspaceId, id, dto);
+  updateConversation(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateConversationDto,
+  ) {
+    return this.communicationsService.updateConversation(request.workspaceId, user, id, dto);
   }
 
   @Post("conversations/:id/participants")
   addParticipant(
     @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Param("id") id: string,
     @Body() dto: CreateConversationParticipantDto,
   ) {
-    return this.communicationsService.addParticipant(request.workspaceId, id, dto);
+    return this.communicationsService.addParticipant(request.workspaceId, user, id, dto);
   }
 
   @Get("conversations/:id/messages")
   listMessages(
     @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Param("id") id: string,
     @Query() query: ListMessagesQueryDto,
   ) {
-    return this.communicationsService.listMessages(request.workspaceId, id, query);
+    return this.communicationsService.listMessages(request.workspaceId, user, id, query);
   }
 
   @Post("conversations/:id/messages")
@@ -82,15 +101,20 @@ export class CommunicationsController {
   @Post("messages/:id/attachments")
   addMessageAttachment(
     @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Param("id") id: string,
     @Body() dto: CreateMessageAttachmentDto,
   ) {
-    return this.communicationsService.addMessageAttachment(request.workspaceId, id, dto);
+    return this.communicationsService.addMessageAttachment(request.workspaceId, user, id, dto);
   }
 
   @Delete("messages/:id")
-  deleteMessage(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.communicationsService.deleteMessage(request.workspaceId, id);
+  deleteMessage(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.communicationsService.deleteMessage(request.workspaceId, user, id);
   }
 
   @Get("notifications")
@@ -103,8 +127,12 @@ export class CommunicationsController {
   }
 
   @Post("notifications")
-  createNotification(@Req() request: WorkspaceRequest, @Body() dto: CreateNotificationDto) {
-    return this.communicationsService.createNotification(request.workspaceId, dto);
+  createNotification(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateNotificationDto,
+  ) {
+    return this.communicationsService.createNotification(request.workspaceId, user, dto);
   }
 
   @Patch("notifications/read-all")
@@ -113,8 +141,12 @@ export class CommunicationsController {
   }
 
   @Patch("notifications/:id/read")
-  readNotification(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.communicationsService.readNotification(request.workspaceId, id);
+  readNotification(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.communicationsService.readNotification(request.workspaceId, user, id);
   }
 
   @Get("notifications/delivery-config")

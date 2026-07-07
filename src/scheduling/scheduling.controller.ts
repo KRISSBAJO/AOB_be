@@ -35,9 +35,14 @@ import { SchedulingService } from "./scheduling.service";
 export class SchedulingController {
   constructor(private readonly schedulingService: SchedulingService) {}
 
+  @RequirePermissions("operations.manage")
   @Get("shifts")
-  listShifts(@Req() request: WorkspaceRequest, @Query() query: ListShiftsQueryDto) {
-    return this.schedulingService.listShifts(request.workspaceId, query);
+  listShifts(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListShiftsQueryDto,
+  ) {
+    return this.schedulingService.listShifts(request.workspaceId, user, query);
   }
 
   @Post("shifts")
@@ -45,9 +50,14 @@ export class SchedulingController {
     return this.schedulingService.createShift(request.workspaceId, dto);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("shifts/:id")
-  getShift(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.schedulingService.getShift(request.workspaceId, id);
+  getShift(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.schedulingService.getShift(request.workspaceId, user, id);
   }
 
   @Patch("shifts/:id")
@@ -73,9 +83,14 @@ export class SchedulingController {
     return this.schedulingService.addShiftAssignment(request.workspaceId, id, dto);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("attendance")
-  listAttendance(@Req() request: WorkspaceRequest, @Query() query: ListAttendanceQueryDto) {
-    return this.schedulingService.listAttendance(request.workspaceId, query);
+  listAttendance(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListAttendanceQueryDto,
+  ) {
+    return this.schedulingService.listAttendance(request.workspaceId, user, query);
   }
 
   @Post("attendance")
@@ -88,23 +103,35 @@ export class SchedulingController {
     return this.schedulingService.updateAttendance(request.workspaceId, id, dto);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("leave-requests")
-  listLeaveRequests(@Req() request: WorkspaceRequest, @Query() query: ListLeaveRequestsQueryDto) {
-    return this.schedulingService.listLeaveRequests(request.workspaceId, query);
+  listLeaveRequests(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListLeaveRequestsQueryDto,
+  ) {
+    return this.schedulingService.listLeaveRequests(request.workspaceId, user, query);
   }
 
+  @RequirePermissions("operations.manage")
   @Post("leave-requests")
-  createLeaveRequest(@Req() request: WorkspaceRequest, @Body() dto: CreateLeaveRequestDto) {
-    return this.schedulingService.createLeaveRequest(request.workspaceId, dto);
+  createLeaveRequest(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateLeaveRequestDto,
+  ) {
+    return this.schedulingService.createLeaveRequest(request.workspaceId, user, dto);
   }
 
+  @RequirePermissions("operations.manage")
   @Patch("leave-requests/:id")
   updateLeaveRequest(
     @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Param("id") id: string,
     @Body() dto: UpdateLeaveRequestDto,
   ) {
-    return this.schedulingService.updateLeaveRequest(request.workspaceId, id, dto);
+    return this.schedulingService.updateLeaveRequest(request.workspaceId, user, id, dto);
   }
 
   @Patch("leave-requests/:id/approve")

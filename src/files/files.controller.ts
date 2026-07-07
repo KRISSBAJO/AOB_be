@@ -26,8 +26,12 @@ export class FilesController {
   }
 
   @Get("attachments")
-  listAttachments(@Req() request: WorkspaceRequest, @Query() query: ListAttachmentsQueryDto) {
-    return this.filesService.listAttachments(request.workspaceId, query);
+  listAttachments(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListAttachmentsQueryDto,
+  ) {
+    return this.filesService.listAttachments(request.workspaceId, user, query);
   }
 
   @Post("attachments")
@@ -40,18 +44,30 @@ export class FilesController {
   }
 
   @Get("attachments/:id")
-  getAttachment(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.filesService.getAttachment(request.workspaceId, id);
+  getAttachment(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.filesService.getAttachment(request.workspaceId, user, id);
   }
 
   @Delete("attachments/:id")
-  deleteAttachment(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.filesService.deleteAttachment(request.workspaceId, id);
+  deleteAttachment(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.filesService.deleteAttachment(request.workspaceId, user, id);
   }
 
   @Get("comments")
-  listComments(@Req() request: WorkspaceRequest, @Query() query: ListCommentsQueryDto) {
-    return this.filesService.listComments(request.workspaceId, query);
+  listComments(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListCommentsQueryDto,
+  ) {
+    return this.filesService.listComments(request.workspaceId, user, query);
   }
 
   @Post("comments")
@@ -64,12 +80,21 @@ export class FilesController {
   }
 
   @Patch("comments/:id")
-  updateComment(@Req() request: WorkspaceRequest, @Param("id") id: string, @Body() dto: UpdateCommentDto) {
-    return this.filesService.updateComment(request.workspaceId, id, dto);
+  updateComment(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateCommentDto,
+  ) {
+    return this.filesService.updateComment(request.workspaceId, user, id, dto);
   }
 
   @Delete("comments/:id")
-  deleteComment(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.filesService.deleteComment(request.workspaceId, id);
+  deleteComment(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.filesService.deleteComment(request.workspaceId, user, id);
   }
 }

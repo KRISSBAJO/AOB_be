@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Prisma, WorkOrderStatus, WorkOrderTaskStatus } from "@prisma/client";
 
+import {
+  WorkspaceAccessScope,
+  WorkspaceAccessService,
+} from "../common/access/workspace-access.service";
 import { AuthenticatedUser } from "../common/auth/authenticated-user";
 import { getPagination, textSearch } from "../common/utils/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -18,9 +22,17 @@ import {
 
 @Injectable()
 export class WorkOrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: WorkspaceAccessService,
+  ) {}
 
-  async list(workspaceId: string, query: ListWorkOrdersQueryDto) {
+  async list(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListWorkOrdersQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const search = textSearch(query.search, ["workOrderNumber", "title", "description"]);
     const scheduledStartAt = {
@@ -37,6 +49,7 @@ export class WorkOrdersService {
       ...(query.priority ? { priority: query.priority } : {}),
       ...(Object.keys(scheduledStartAt).length ? { scheduledStartAt } : {}),
       ...(search ? { OR: search } : {}),
+      AND: [this.access.workOrderWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -54,6 +67,8 @@ export class WorkOrdersService {
   }
 
   async create(workspaceId: string, user: AuthenticatedUser, dto: CreateWorkOrderDto) {
+    const scope = await this.access.getScope(workspaceId, user);
+    this.access.assertUnrestricted(scope);
     await this.assertCustomer(workspaceId, dto.customerId);
     await this.assertFacility(workspaceId, dto.customerId, dto.facilityId);
     await this.assertEmployee(workspaceId, dto.supervisorEmployeeId);
@@ -99,14 +114,22 @@ export class WorkOrdersService {
     });
   }
 
-  get(workspaceId: string, id: string) {
+  async get(workspaceId: string, user: AuthenticatedUser, id: string) {
+    const scope = await this.access.getScope(workspaceId, user);
     return this.prisma.workOrder.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, workspaceId, AND: [this.access.workOrderWhere(scope)] },
       include: this.detailInclude(),
     });
   }
 
-  async update(workspaceId: string, id: string, dto: UpdateWorkOrderDto) {
+  async update(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    id: string,
+    dto: UpdateWorkOrderDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    this.access.assertUnrestricted(scope);
     const current = await this.prisma.workOrder.findFirstOrThrow({
       where: { id, workspaceId },
     });
@@ -147,6 +170,8 @@ export class WorkOrdersService {
     user: AuthenticatedUser,
     dto: UpdateWorkOrderStatusDto,
   ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    this.access.assertUnrestricted(scope);
     const current = await this.prisma.workOrder.findFirstOrThrow({
       where: { id, workspaceId },
     });
@@ -187,7 +212,14 @@ export class WorkOrdersService {
     });
   }
 
-  async addTask(workspaceId: string, workOrderId: string, dto: CreateWorkOrderTaskDto) {
+  async addTask(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    workOrderId: string,
+    dto: CreateWorkOrderTaskDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    this.access.assertUnrestricted(scope);
     await this.assertWorkOrder(workspaceId, workOrderId);
 
     return this.prisma.workOrderTask.create({
@@ -202,7 +234,26 @@ export class WorkOrdersService {
     });
   }
 
-  async updateTask(workspaceId: string, id: string, dto: UpdateWorkOrderTaskDto) {
+  async updateTask(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    id: string,
+    dto: UpdateWorkOrderTaskDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    const task = await this.prisma.workOrderTask.findFirstOrThrow({
+      where: { id, workspaceId },
+      select: { workOrderId: true },
+    });
+    await this.assertScopedWorkOrder(workspaceId, task.workOrderId, scope);
+    if (!scope.unrestricted) {
+      if (!scope.employeeId) {
+        this.access.assertUnrestricted(scope);
+      }
+      if (dto.completedByEmployeeId && dto.completedByEmployeeId !== scope.employeeId) {
+        throw new BadRequestException("Staff can only complete tasks as themselves");
+      }
+    }
     await this.assertEmployee(workspaceId, dto.completedByEmployeeId);
 
     return this.prisma.workOrderTask.update({
@@ -220,9 +271,12 @@ export class WorkOrdersService {
 
   async addAssignment(
     workspaceId: string,
+    user: AuthenticatedUser,
     workOrderId: string,
     dto: CreateWorkOrderAssignmentDto,
   ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    this.access.assertUnrestricted(scope);
     const workOrder = await this.assertWorkOrder(workspaceId, workOrderId);
     await this.assertEmployee(workspaceId, dto.employeeId);
     await this.assertWorkOrderAssignmentAvailability(workspaceId, dto.employeeId, workOrder);
@@ -249,11 +303,17 @@ export class WorkOrdersService {
 
   async addPhoto(
     workspaceId: string,
-    workOrderId: string,
     user: AuthenticatedUser,
+    workOrderId: string,
     dto: CreateWorkOrderPhotoDto,
   ) {
-    await this.assertWorkOrder(workspaceId, workOrderId);
+    const scope = await this.access.getScope(workspaceId, user);
+    await this.assertScopedWorkOrder(workspaceId, workOrderId, scope);
+    if (!scope.unrestricted) {
+      if (!scope.employeeId || dto.uploadedByEmployeeId !== scope.employeeId) {
+        throw new BadRequestException("Staff can only upload proof as themselves");
+      }
+    }
     await this.assertEmployee(workspaceId, dto.uploadedByEmployeeId);
 
     return this.prisma.workOrderPhoto.create({
@@ -272,8 +332,17 @@ export class WorkOrdersService {
     });
   }
 
-  async signoff(workspaceId: string, workOrderId: string, dto: CreateWorkOrderSignoffDto) {
-    await this.assertWorkOrder(workspaceId, workOrderId);
+  async signoff(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    workOrderId: string,
+    dto: CreateWorkOrderSignoffDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    await this.assertScopedWorkOrder(workspaceId, workOrderId, scope);
+    if (!scope.unrestricted && scope.customerContactId) {
+      dto.signedByContactId = scope.customerContactId;
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const signoff = await tx.workOrderSignoff.create({
@@ -351,6 +420,16 @@ export class WorkOrdersService {
 
   private assertWorkOrder(workspaceId: string, id: string) {
     return this.prisma.workOrder.findFirstOrThrow({ where: { id, workspaceId } });
+  }
+
+  private assertScopedWorkOrder(
+    workspaceId: string,
+    id: string,
+    scope: WorkspaceAccessScope,
+  ) {
+    return this.prisma.workOrder.findFirstOrThrow({
+      where: { id, workspaceId, AND: [this.access.workOrderWhere(scope)] },
+    });
   }
 
   private assertDateRange(start?: string, end?: string) {

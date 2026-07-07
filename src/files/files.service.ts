@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Prisma } from "@prisma/client";
 
+import { WorkspaceAccessService } from "../common/access/workspace-access.service";
 import { AuthenticatedUser } from "../common/auth/authenticated-user";
 import { getPagination, textSearch } from "../common/utils/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -12,17 +14,24 @@ export class FilesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly access: WorkspaceAccessService,
   ) {}
 
-  async listAttachments(workspaceId: string, query: ListAttachmentsQueryDto) {
+  async listAttachments(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListAttachmentsQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const search = textSearch(query.search, ["fileName", "description", "url"]);
-    const where = {
+    const where: Prisma.AttachmentWhereInput = {
       workspaceId,
       ...(query.entityType ? { entityType: query.entityType } : {}),
       ...(query.entityId ? { entityId: query.entityId } : {}),
       ...(query.documentType ? { documentType: query.documentType } : {}),
       ...(search ? { OR: search } : {}),
+      AND: [this.access.ownFileWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -57,26 +66,37 @@ export class FilesService {
     });
   }
 
-  getAttachment(workspaceId: string, id: string) {
+  async getAttachment(workspaceId: string, user: AuthenticatedUser, id: string) {
+    const scope = await this.access.getScope(workspaceId, user);
     return this.prisma.attachment.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, workspaceId, AND: [this.access.ownFileWhere(scope)] },
       include: { uploadedBy: { select: { id: true, displayName: true, email: true } } },
     });
   }
 
-  async deleteAttachment(workspaceId: string, id: string) {
+  async deleteAttachment(workspaceId: string, user: AuthenticatedUser, id: string) {
+    const scope = await this.access.getScope(workspaceId, user);
+    await this.prisma.attachment.findFirstOrThrow({
+      where: { id, workspaceId, AND: [this.access.ownFileWhere(scope)] },
+    });
     await this.prisma.attachment.delete({ where: { id, workspaceId } });
     return { deleted: true };
   }
 
-  async listComments(workspaceId: string, query: ListCommentsQueryDto) {
+  async listComments(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListCommentsQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const search = textSearch(query.search, ["body"]);
-    const where = {
+    const where: Prisma.CommentWhereInput = {
       workspaceId,
       ...(query.entityType ? { entityType: query.entityType } : {}),
       ...(query.entityId ? { entityId: query.entityId } : {}),
       ...(search ? { OR: search } : {}),
+      AND: [this.access.ownCommentWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -93,7 +113,8 @@ export class FilesService {
     return { data, meta: { skip, take, total } };
   }
 
-  createComment(workspaceId: string, user: AuthenticatedUser, dto: CreateCommentDto) {
+  async createComment(workspaceId: string, user: AuthenticatedUser, dto: CreateCommentDto) {
+    const scope = await this.access.getScope(workspaceId, user);
     return this.prisma.comment.create({
       data: {
         workspaceId,
@@ -101,13 +122,22 @@ export class FilesService {
         entityType: dto.entityType,
         entityId: dto.entityId,
         body: dto.body.trim(),
-        internalOnly: dto.internalOnly,
+        internalOnly: scope.unrestricted ? dto.internalOnly : false,
       },
       include: { author: { select: { id: true, displayName: true, email: true } } },
     });
   }
 
-  updateComment(workspaceId: string, id: string, dto: UpdateCommentDto) {
+  async updateComment(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    id: string,
+    dto: UpdateCommentDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    await this.prisma.comment.findFirstOrThrow({
+      where: { id, workspaceId, AND: [this.access.ownCommentWhere(scope)] },
+    });
     return this.prisma.comment.update({
       where: { id, workspaceId },
       data: {
@@ -120,7 +150,11 @@ export class FilesService {
     });
   }
 
-  async deleteComment(workspaceId: string, id: string) {
+  async deleteComment(workspaceId: string, user: AuthenticatedUser, id: string) {
+    const scope = await this.access.getScope(workspaceId, user);
+    await this.prisma.comment.findFirstOrThrow({
+      where: { id, workspaceId, AND: [this.access.ownCommentWhere(scope)] },
+    });
     await this.prisma.comment.delete({ where: { id, workspaceId } });
     return { deleted: true };
   }

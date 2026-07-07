@@ -1,6 +1,12 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
-import { ServiceRequestStatus, WorkOrderStatus, WorkOrderTaskStatus } from "@prisma/client";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import {
+  Prisma,
+  ServiceRequestStatus,
+  WorkOrderStatus,
+  WorkOrderTaskStatus,
+} from "@prisma/client";
 
+import { WorkspaceAccessService } from "../common/access/workspace-access.service";
 import { AuthenticatedUser } from "../common/auth/authenticated-user";
 import { getPagination, textSearch } from "../common/utils/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -15,16 +21,24 @@ import {
 
 @Injectable()
 export class ServiceRequestsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: WorkspaceAccessService,
+  ) {}
 
-  async list(workspaceId: string, query: ListServiceRequestsQueryDto) {
+  async list(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListServiceRequestsQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const search = textSearch(query.search, ["requestNumber", "title", "description"]);
     const requestedStartAt = {
       ...(query.startFrom ? { gte: new Date(query.startFrom) } : {}),
       ...(query.startTo ? { lte: new Date(query.startTo) } : {}),
     };
-    const where = {
+    const where: Prisma.ServiceRequestWhereInput = {
       workspaceId,
       ...(query.customerId ? { customerId: query.customerId } : {}),
       ...(query.facilityId ? { facilityId: query.facilityId } : {}),
@@ -34,6 +48,7 @@ export class ServiceRequestsService {
       ...(query.priority ? { priority: query.priority } : {}),
       ...(Object.keys(requestedStartAt).length ? { requestedStartAt } : {}),
       ...(search ? { OR: search } : {}),
+      AND: [this.access.serviceRequestWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -51,9 +66,26 @@ export class ServiceRequestsService {
   }
 
   async create(workspaceId: string, user: AuthenticatedUser, dto: CreateServiceRequestDto) {
-    await this.assertCustomer(workspaceId, dto.customerId);
-    await this.assertFacility(workspaceId, dto.customerId, dto.facilityId);
-    await this.assertContract(workspaceId, dto.customerId, dto.contractId);
+    const scope = await this.access.getScope(workspaceId, user);
+    if (!scope.unrestricted && !scope.customerId) {
+      throw new ForbiddenException("Only AOG managers or client contacts can create service requests");
+    }
+
+    const customerId = scope.unrestricted ? dto.customerId : scope.customerId!;
+    const requestedByContactId = scope.unrestricted
+      ? dto.requestedByContactId
+      : scope.customerContactId;
+    const facilityId = dto.facilityId;
+
+    if (!scope.unrestricted && facilityId && scope.facilityIds.length) {
+      if (!scope.facilityIds.includes(facilityId)) {
+        throw new ForbiddenException("You can only request service for assigned facilities");
+      }
+    }
+
+    await this.assertCustomer(workspaceId, customerId);
+    await this.assertFacility(workspaceId, customerId, facilityId);
+    await this.assertContract(workspaceId, customerId, dto.contractId);
     this.assertDateRange(dto.requestedStartAt, dto.requestedEndAt);
 
     return this.prisma.$transaction(async (tx) => {
@@ -61,12 +93,12 @@ export class ServiceRequestsService {
         data: {
           workspaceId,
           requestNumber: await this.generateRequestNumber(workspaceId),
-          customerId: dto.customerId,
-          facilityId: dto.facilityId,
+          customerId,
+          facilityId,
           contractId: dto.contractId,
           createdById: user.id,
-          requestedByContactId: dto.requestedByContactId,
-          assignedManagerId: dto.assignedManagerId,
+          requestedByContactId,
+          assignedManagerId: scope.unrestricted ? dto.assignedManagerId : undefined,
           title: dto.title.trim(),
           description: dto.description,
           serviceLine: dto.serviceLine,
@@ -98,14 +130,26 @@ export class ServiceRequestsService {
     });
   }
 
-  get(workspaceId: string, id: string) {
+  async get(workspaceId: string, user: AuthenticatedUser, id: string) {
+    const scope = await this.access.getScope(workspaceId, user);
     return this.prisma.serviceRequest.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: {
+        id,
+        workspaceId,
+        AND: [this.access.serviceRequestWhere(scope)],
+      },
       include: this.detailInclude(),
     });
   }
 
-  async update(workspaceId: string, id: string, dto: UpdateServiceRequestDto) {
+  async update(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    id: string,
+    dto: UpdateServiceRequestDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    this.access.assertUnrestricted(scope);
     const current = await this.prisma.serviceRequest.findFirstOrThrow({
       where: { id, workspaceId },
     });
@@ -149,6 +193,8 @@ export class ServiceRequestsService {
     user: AuthenticatedUser,
     dto: UpdateServiceRequestStatusDto,
   ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    this.access.assertUnrestricted(scope);
     const current = await this.prisma.serviceRequest.findFirstOrThrow({
       where: { id, workspaceId },
     });
@@ -196,7 +242,14 @@ export class ServiceRequestsService {
     });
   }
 
-  async addItem(workspaceId: string, serviceRequestId: string, dto: CreateServiceRequestItemDto) {
+  async addItem(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    serviceRequestId: string,
+    dto: CreateServiceRequestItemDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    this.access.assertUnrestricted(scope);
     await this.assertServiceRequest(workspaceId, serviceRequestId);
     const service = dto.serviceId
       ? await this.prisma.service.findFirstOrThrow({ where: { id: dto.serviceId, workspaceId } })
@@ -237,6 +290,8 @@ export class ServiceRequestsService {
     user: AuthenticatedUser,
     dto: ConvertServiceRequestDto,
   ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    this.access.assertUnrestricted(scope);
     const request = await this.prisma.serviceRequest.findFirstOrThrow({
       where: { id, workspaceId },
       include: { items: true },

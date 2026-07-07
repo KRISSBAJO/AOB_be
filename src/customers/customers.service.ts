@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { CustomerStatus, FacilityStatus } from "@prisma/client";
+import { CustomerStatus, FacilityStatus, Prisma } from "@prisma/client";
 
 import { AuthService } from "../auth/auth.service";
 import { InviteUserDto } from "../auth/dto/invite-user.dto";
+import { WorkspaceAccessService } from "../common/access/workspace-access.service";
+import { AuthenticatedUser } from "../common/auth/authenticated-user";
 import { getPagination, textSearch } from "../common/utils/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateCustomerDto, CreateCustomerContactDto, UpdateCustomerContactDto, UpdateCustomerDto } from "./dto/customer.dto";
@@ -14,12 +16,18 @@ export class CustomersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    private readonly access: WorkspaceAccessService,
   ) {}
 
-  async listCustomers(workspaceId: string, query: ListCustomersQueryDto) {
+  async listCustomers(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListCustomersQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const search = textSearch(query.search, ["code", "name", "billingEmail", "phone", "city", "state"]);
-    const where = {
+    const where: Prisma.CustomerWhereInput = {
       workspaceId,
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
@@ -27,6 +35,7 @@ export class CustomersService {
       ...(query.city ? { city: { contains: query.city, mode: "insensitive" as const } } : {}),
       ...(query.state ? { state: { contains: query.state, mode: "insensitive" as const } } : {}),
       ...(search ? { OR: search } : {}),
+      AND: [this.access.customerWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -63,9 +72,15 @@ export class CustomersService {
     });
   }
 
-  getCustomer(workspaceId: string, id: string) {
+  async getCustomer(workspaceId: string, user: AuthenticatedUser, id: string) {
+    const scope = await this.access.getScope(workspaceId, user);
     return this.prisma.customer.findFirstOrThrow({
-      where: { id, workspaceId, deletedAt: null },
+      where: {
+        id,
+        workspaceId,
+        deletedAt: null,
+        AND: [this.access.customerWhere(scope)],
+      },
       include: {
         contacts: { orderBy: [{ isPrimary: "desc" }, { lastName: "asc" }] },
         facilities: { orderBy: { name: "asc" } },
@@ -108,11 +123,24 @@ export class CustomersService {
     });
   }
 
-  async listCustomerContacts(workspaceId: string, customerId: string) {
-    await this.assertCustomer(workspaceId, customerId);
+  async listCustomerContacts(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    customerId: string,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    await this.assertCustomer(workspaceId, customerId, scope);
 
     return this.prisma.customerContact.findMany({
-      where: { workspaceId, customerId },
+      where: {
+        workspaceId,
+        customerId,
+        ...(scope.unrestricted
+          ? {}
+          : scope.customerContactId
+            ? { id: scope.customerContactId }
+            : {}),
+      },
       orderBy: [{ isPrimary: "desc" }, { lastName: "asc" }, { firstName: "asc" }],
     });
   }
@@ -185,10 +213,15 @@ export class CustomersService {
     return this.authService.inviteCustomerContact(workspaceId, id, dto);
   }
 
-  async listFacilities(workspaceId: string, query: ListFacilitiesQueryDto) {
+  async listFacilities(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListFacilitiesQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const search = textSearch(query.search, ["code", "name", "city", "state", "postalCode"]);
-    const where = {
+    const where: Prisma.FacilityWhereInput = {
       workspaceId,
       ...(query.customerId ? { customerId: query.customerId } : {}),
       ...(query.status ? { status: query.status } : {}),
@@ -196,6 +229,7 @@ export class CustomersService {
       ...(query.city ? { city: { contains: query.city, mode: "insensitive" as const } } : {}),
       ...(query.state ? { state: { contains: query.state, mode: "insensitive" as const } } : {}),
       ...(search ? { OR: search } : {}),
+      AND: [this.access.facilityWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -237,9 +271,10 @@ export class CustomersService {
     });
   }
 
-  getFacility(workspaceId: string, id: string) {
+  async getFacility(workspaceId: string, user: AuthenticatedUser, id: string) {
+    const scope = await this.access.getScope(workspaceId, user);
     return this.prisma.facility.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, workspaceId, AND: [this.access.facilityWhere(scope)] },
       include: {
         customer: { select: { id: true, name: true, status: true } },
         contacts: { orderBy: [{ isPrimary: "desc" }, { name: "asc" }] },
@@ -284,8 +319,13 @@ export class CustomersService {
     });
   }
 
-  async listFacilityContacts(workspaceId: string, facilityId: string) {
-    await this.assertFacility(workspaceId, facilityId);
+  async listFacilityContacts(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    facilityId: string,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    await this.assertFacility(workspaceId, facilityId, scope);
 
     return this.prisma.facilityContact.findMany({
       where: { workspaceId, facilityId },
@@ -405,15 +445,32 @@ export class CustomersService {
     );
   }
 
-  private assertCustomer(workspaceId: string, customerId: string) {
+  private assertCustomer(
+    workspaceId: string,
+    customerId: string,
+    scope?: Awaited<ReturnType<WorkspaceAccessService["getScope"]>>,
+  ) {
     return this.prisma.customer.findFirstOrThrow({
-      where: { id: customerId, workspaceId, deletedAt: null },
+      where: {
+        id: customerId,
+        workspaceId,
+        deletedAt: null,
+        ...(scope ? { AND: [this.access.customerWhere(scope)] } : {}),
+      },
     });
   }
 
-  private assertFacility(workspaceId: string, facilityId: string) {
+  private assertFacility(
+    workspaceId: string,
+    facilityId: string,
+    scope?: Awaited<ReturnType<WorkspaceAccessService["getScope"]>>,
+  ) {
     return this.prisma.facility.findFirstOrThrow({
-      where: { id: facilityId, workspaceId },
+      where: {
+        id: facilityId,
+        workspaceId,
+        ...(scope ? { AND: [this.access.facilityWhere(scope)] } : {}),
+      },
     });
   }
 

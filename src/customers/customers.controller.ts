@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
+import { AuthenticatedUser } from "../common/auth/authenticated-user";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
@@ -20,9 +22,14 @@ import { CustomersService } from "./customers.service";
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
+  @RequirePermissions("operations.manage")
   @Get("customers")
-  listCustomers(@Req() request: WorkspaceRequest, @Query() query: ListCustomersQueryDto) {
-    return this.customersService.listCustomers(request.workspaceId, query);
+  listCustomers(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListCustomersQueryDto,
+  ) {
+    return this.customersService.listCustomers(request.workspaceId, user, query);
   }
 
   @Post("customers")
@@ -30,9 +37,14 @@ export class CustomersController {
     return this.customersService.createCustomer(request.workspaceId, dto);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("customers/:id")
-  getCustomer(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.customersService.getCustomer(request.workspaceId, id);
+  getCustomer(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.customersService.getCustomer(request.workspaceId, user, id);
   }
 
   @Patch("customers/:id")
@@ -49,9 +61,18 @@ export class CustomersController {
     return this.customersService.archiveCustomer(request.workspaceId, id);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("customers/:customerId/contacts")
-  listCustomerContacts(@Req() request: WorkspaceRequest, @Param("customerId") customerId: string) {
-    return this.customersService.listCustomerContacts(request.workspaceId, customerId);
+  listCustomerContacts(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("customerId") customerId: string,
+  ) {
+    return this.customersService.listCustomerContacts(
+      request.workspaceId,
+      user,
+      customerId,
+    );
   }
 
   @Post("customers/:customerId/contacts")
@@ -86,9 +107,14 @@ export class CustomersController {
     return this.customersService.inviteCustomerContact(request.workspaceId, id, dto);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("facilities")
-  listFacilities(@Req() request: WorkspaceRequest, @Query() query: ListFacilitiesQueryDto) {
-    return this.customersService.listFacilities(request.workspaceId, query);
+  listFacilities(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListFacilitiesQueryDto,
+  ) {
+    return this.customersService.listFacilities(request.workspaceId, user, query);
   }
 
   @Post("facilities")
@@ -96,9 +122,14 @@ export class CustomersController {
     return this.customersService.createFacility(request.workspaceId, dto);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("facilities/:id")
-  getFacility(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.customersService.getFacility(request.workspaceId, id);
+  getFacility(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.customersService.getFacility(request.workspaceId, user, id);
   }
 
   @Patch("facilities/:id")
@@ -115,9 +146,18 @@ export class CustomersController {
     return this.customersService.archiveFacility(request.workspaceId, id);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("facilities/:facilityId/contacts")
-  listFacilityContacts(@Req() request: WorkspaceRequest, @Param("facilityId") facilityId: string) {
-    return this.customersService.listFacilityContacts(request.workspaceId, facilityId);
+  listFacilityContacts(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("facilityId") facilityId: string,
+  ) {
+    return this.customersService.listFacilityContacts(
+      request.workspaceId,
+      user,
+      facilityId,
+    );
   }
 
   @Post("facilities/:facilityId/contacts")

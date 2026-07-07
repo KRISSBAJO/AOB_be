@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { EmployeeStatus } from "@prisma/client";
+import { EmployeeStatus, Prisma } from "@prisma/client";
 
 import { AuthService } from "../auth/auth.service";
 import { InviteUserDto } from "../auth/dto/invite-user.dto";
+import { WorkspaceAccessService } from "../common/access/workspace-access.service";
+import { AuthenticatedUser } from "../common/auth/authenticated-user";
 import { getPagination, textSearch } from "../common/utils/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import {
@@ -29,6 +31,7 @@ export class WorkforceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    private readonly access: WorkspaceAccessService,
   ) {}
 
   async listDepartments(workspaceId: string, query: ListDepartmentsQueryDto) {
@@ -165,7 +168,12 @@ export class WorkforceService {
     return this.prisma.certification.delete({ where: { id, workspaceId } });
   }
 
-  async listEmployees(workspaceId: string, query: ListEmployeesQueryDto) {
+  async listEmployees(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListEmployeesQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const search = textSearch(query.search, [
       "employeeNumber",
@@ -174,7 +182,7 @@ export class WorkforceService {
       "email",
       "phone",
     ]);
-    const where = {
+    const where: Prisma.EmployeeWhereInput = {
       workspaceId,
       ...(query.departmentId ? { departmentId: query.departmentId } : {}),
       ...(query.status ? { status: query.status } : {}),
@@ -183,6 +191,7 @@ export class WorkforceService {
         ? { serviceLines: { has: query.serviceLine } }
         : {}),
       ...(search ? { OR: search } : {}),
+      AND: [this.access.employeeWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -236,9 +245,10 @@ export class WorkforceService {
     });
   }
 
-  getEmployee(workspaceId: string, id: string) {
+  async getEmployee(workspaceId: string, user: AuthenticatedUser, id: string) {
+    const scope = await this.access.getScope(workspaceId, user);
     return this.prisma.employee.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, workspaceId, AND: [this.access.employeeWhere(scope)] },
       include: {
         ...this.employeeInclude(),
         skills: { include: { skill: true } },

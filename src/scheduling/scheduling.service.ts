@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { LeaveStatus, ShiftStatus } from "@prisma/client";
+import { LeaveStatus, Prisma, ShiftStatus } from "@prisma/client";
 
+import { WorkspaceAccessService } from "../common/access/workspace-access.service";
 import { AuthenticatedUser } from "../common/auth/authenticated-user";
 import { getPagination, textSearch } from "../common/utils/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -19,16 +20,24 @@ import {
 
 @Injectable()
 export class SchedulingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: WorkspaceAccessService,
+  ) {}
 
-  async listShifts(workspaceId: string, query: ListShiftsQueryDto) {
+  async listShifts(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListShiftsQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const search = textSearch(query.search, ["title", "notes"]);
     const startAt = {
       ...(query.startFrom ? { gte: new Date(query.startFrom) } : {}),
       ...(query.startTo ? { lte: new Date(query.startTo) } : {}),
     };
-    const where = {
+    const where: Prisma.ShiftWhereInput = {
       workspaceId,
       ...(query.facilityId ? { facilityId: query.facilityId } : {}),
       ...(query.departmentId ? { departmentId: query.departmentId } : {}),
@@ -36,6 +45,7 @@ export class SchedulingService {
       ...(query.status ? { status: query.status } : {}),
       ...(Object.keys(startAt).length ? { startAt } : {}),
       ...(search ? { OR: search } : {}),
+      AND: [this.access.shiftWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -70,9 +80,10 @@ export class SchedulingService {
     });
   }
 
-  getShift(workspaceId: string, id: string) {
+  async getShift(workspaceId: string, user: AuthenticatedUser, id: string) {
+    const scope = await this.access.getScope(workspaceId, user);
     return this.prisma.shift.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, workspaceId, AND: [this.access.shiftWhere(scope)] },
       include: this.shiftInclude(),
     });
   }
@@ -134,17 +145,23 @@ export class SchedulingService {
     });
   }
 
-  async listAttendance(workspaceId: string, query: ListAttendanceQueryDto) {
+  async listAttendance(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListAttendanceQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const date = {
       ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
       ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
     };
-    const where = {
+    const where: Prisma.AttendanceWhereInput = {
       workspaceId,
       ...(query.employeeId ? { employeeId: query.employeeId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(Object.keys(date).length ? { date } : {}),
+      AND: [this.access.attendanceWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -199,14 +216,20 @@ export class SchedulingService {
     });
   }
 
-  async listLeaveRequests(workspaceId: string, query: ListLeaveRequestsQueryDto) {
+  async listLeaveRequests(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    query: ListLeaveRequestsQueryDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
     const { skip, take } = getPagination(query);
     const search = textSearch(query.search, ["reason", "reviewNote"]);
-    const where = {
+    const where: Prisma.LeaveRequestWhereInput = {
       workspaceId,
       ...(query.employeeId ? { employeeId: query.employeeId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(search ? { OR: search } : {}),
+      AND: [this.access.leaveRequestWhere(scope)],
     };
 
     const [data, total] = await Promise.all([
@@ -226,28 +249,54 @@ export class SchedulingService {
     return { data, meta: { skip, take, total } };
   }
 
-  async createLeaveRequest(workspaceId: string, dto: CreateLeaveRequestDto) {
-    await this.assertEmployee(workspaceId, dto.employeeId);
+  async createLeaveRequest(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    dto: CreateLeaveRequestDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    const employeeId = scope.unrestricted ? dto.employeeId : scope.employeeId;
+    if (!employeeId) {
+      this.access.assertUnrestricted(scope);
+    }
+    const scopedEmployeeId = employeeId!;
+    await this.assertEmployee(workspaceId, scopedEmployeeId);
     this.assertDateRange(dto.startDate, dto.endDate);
 
     return this.prisma.leaveRequest.create({
       data: {
         ...dto,
         workspaceId,
+        employeeId: scopedEmployeeId,
+        status: scope.unrestricted ? dto.status : LeaveStatus.REQUESTED,
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
       },
     });
   }
 
-  async updateLeaveRequest(workspaceId: string, id: string, dto: UpdateLeaveRequestDto) {
-    await this.assertEmployee(workspaceId, dto.employeeId);
+  async updateLeaveRequest(
+    workspaceId: string,
+    user: AuthenticatedUser,
+    id: string,
+    dto: UpdateLeaveRequestDto,
+  ) {
+    const scope = await this.access.getScope(workspaceId, user);
+    const current = await this.prisma.leaveRequest.findFirstOrThrow({
+      where: { id, workspaceId, AND: [this.access.leaveRequestWhere(scope)] },
+      select: { employeeId: true },
+    });
+    const employeeId = scope.unrestricted ? (dto.employeeId ?? current.employeeId) : current.employeeId;
+    await this.assertEmployee(workspaceId, employeeId);
     this.assertDateRange(dto.startDate, dto.endDate);
 
     return this.prisma.leaveRequest.update({
       where: { id, workspaceId },
       data: {
         ...dto,
+        employeeId,
+        status: scope.unrestricted ? dto.status : undefined,
+        reviewNote: scope.unrestricted ? dto.reviewNote : undefined,
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
         endDate: dto.endDate ? new Date(dto.endDate) : undefined,
       },

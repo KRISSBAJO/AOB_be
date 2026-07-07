@@ -27,8 +27,12 @@ export class ServiceRequestsController {
   constructor(private readonly serviceRequestsService: ServiceRequestsService) {}
 
   @Get()
-  list(@Req() request: WorkspaceRequest, @Query() query: ListServiceRequestsQueryDto) {
-    return this.serviceRequestsService.list(request.workspaceId, query);
+  list(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListServiceRequestsQueryDto,
+  ) {
+    return this.serviceRequestsService.list(request.workspaceId, user, query);
   }
 
   @Post()
@@ -41,17 +45,22 @@ export class ServiceRequestsController {
   }
 
   @Get(":id")
-  get(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.serviceRequestsService.get(request.workspaceId, id);
+  get(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.serviceRequestsService.get(request.workspaceId, user, id);
   }
 
   @Patch(":id")
   update(
     @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Param("id") id: string,
     @Body() dto: UpdateServiceRequestDto,
   ) {
-    return this.serviceRequestsService.update(request.workspaceId, id, dto);
+    return this.serviceRequestsService.update(request.workspaceId, user, id, dto);
   }
 
   @Patch(":id/status")
@@ -67,10 +76,11 @@ export class ServiceRequestsController {
   @Post(":id/items")
   addItem(
     @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Param("id") id: string,
     @Body() dto: CreateServiceRequestItemDto,
   ) {
-    return this.serviceRequestsService.addItem(request.workspaceId, id, dto);
+    return this.serviceRequestsService.addItem(request.workspaceId, user, id, dto);
   }
 
   @Post(":id/approve")

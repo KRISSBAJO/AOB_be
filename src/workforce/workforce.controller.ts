@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
+import { AuthenticatedUser } from "../common/auth/authenticated-user";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
@@ -116,9 +118,14 @@ export class WorkforceController {
     return this.workforceService.deleteCertification(request.workspaceId, id);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("employees")
-  listEmployees(@Req() request: WorkspaceRequest, @Query() query: ListEmployeesQueryDto) {
-    return this.workforceService.listEmployees(request.workspaceId, query);
+  listEmployees(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListEmployeesQueryDto,
+  ) {
+    return this.workforceService.listEmployees(request.workspaceId, user, query);
   }
 
   @Post("employees")
@@ -126,9 +133,14 @@ export class WorkforceController {
     return this.workforceService.createEmployee(request.workspaceId, dto);
   }
 
+  @RequirePermissions("operations.manage")
   @Get("employees/:id")
-  getEmployee(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.workforceService.getEmployee(request.workspaceId, id);
+  getEmployee(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.workforceService.getEmployee(request.workspaceId, user, id);
   }
 
   @Patch("employees/:id")

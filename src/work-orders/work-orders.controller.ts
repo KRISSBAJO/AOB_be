@@ -30,8 +30,12 @@ export class WorkOrdersController {
   constructor(private readonly workOrdersService: WorkOrdersService) {}
 
   @Get()
-  list(@Req() request: WorkspaceRequest, @Query() query: ListWorkOrdersQueryDto) {
-    return this.workOrdersService.list(request.workspaceId, query);
+  list(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListWorkOrdersQueryDto,
+  ) {
+    return this.workOrdersService.list(request.workspaceId, user, query);
   }
 
   @Post()
@@ -44,13 +48,22 @@ export class WorkOrdersController {
   }
 
   @Get(":id")
-  get(@Req() request: WorkspaceRequest, @Param("id") id: string) {
-    return this.workOrdersService.get(request.workspaceId, id);
+  get(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.workOrdersService.get(request.workspaceId, user, id);
   }
 
   @Patch(":id")
-  update(@Req() request: WorkspaceRequest, @Param("id") id: string, @Body() dto: UpdateWorkOrderDto) {
-    return this.workOrdersService.update(request.workspaceId, id, dto);
+  update(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateWorkOrderDto,
+  ) {
+    return this.workOrdersService.update(request.workspaceId, user, id, dto);
   }
 
   @Patch(":id/status")
@@ -64,26 +77,33 @@ export class WorkOrdersController {
   }
 
   @Post(":id/tasks")
-  addTask(@Req() request: WorkspaceRequest, @Param("id") id: string, @Body() dto: CreateWorkOrderTaskDto) {
-    return this.workOrdersService.addTask(request.workspaceId, id, dto);
+  addTask(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: CreateWorkOrderTaskDto,
+  ) {
+    return this.workOrdersService.addTask(request.workspaceId, user, id, dto);
   }
 
   @Patch("tasks/:taskId")
   updateTask(
     @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Param("taskId") taskId: string,
     @Body() dto: UpdateWorkOrderTaskDto,
   ) {
-    return this.workOrdersService.updateTask(request.workspaceId, taskId, dto);
+    return this.workOrdersService.updateTask(request.workspaceId, user, taskId, dto);
   }
 
   @Post(":id/assignments")
   addAssignment(
     @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Param("id") id: string,
     @Body() dto: CreateWorkOrderAssignmentDto,
   ) {
-    return this.workOrdersService.addAssignment(request.workspaceId, id, dto);
+    return this.workOrdersService.addAssignment(request.workspaceId, user, id, dto);
   }
 
   @Post(":id/photos")
@@ -93,12 +113,17 @@ export class WorkOrdersController {
     @Param("id") id: string,
     @Body() dto: CreateWorkOrderPhotoDto,
   ) {
-    return this.workOrdersService.addPhoto(request.workspaceId, id, user, dto);
+    return this.workOrdersService.addPhoto(request.workspaceId, user, id, dto);
   }
 
   @Post(":id/signoff")
-  signoff(@Req() request: WorkspaceRequest, @Param("id") id: string, @Body() dto: CreateWorkOrderSignoffDto) {
-    return this.workOrdersService.signoff(request.workspaceId, id, dto);
+  signoff(
+    @Req() request: WorkspaceRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: CreateWorkOrderSignoffDto,
+  ) {
+    return this.workOrdersService.signoff(request.workspaceId, user, id, dto);
   }
 
   @Delete(":id")
