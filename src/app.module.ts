@@ -32,6 +32,7 @@ import { DashboardModule } from "./dashboard/dashboard.module";
 import { ReportsModule } from "./reports/reports.module";
 import { AdminModule } from "./admin/admin.module";
 import { PublicBookingsModule } from "./public-bookings/public-bookings.module";
+import { StaffPortalModule } from "./staff-portal/staff-portal.module";
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { PublicBookingsModule } from "./public-bookings/public-bookings.module";
     ReportsModule,
     AdminModule,
     PublicBookingsModule,
+    StaffPortalModule,
     ResourcesModule,
   ],
   providers: [

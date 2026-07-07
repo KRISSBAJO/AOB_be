@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
   AttachmentEntityType,
@@ -32,8 +36,16 @@ type PublicBookingContext = {
 type BookingWithRelations = ServiceRequest & {
   customer: Pick<Customer, "name">;
   facility: Pick<Facility, "name" | "city" | "state"> | null;
-  requestedByContact: Pick<CustomerContact, "firstName" | "lastName" | "email" | "phone"> | null;
+  requestedByContact: Pick<
+    CustomerContact,
+    "firstName" | "lastName" | "email" | "phone"
+  > | null;
   workOrders: Array<{ workOrderNumber: string; status: string }>;
+  statusHistory: Array<{
+    toStatus: ServiceRequestStatus;
+    note: string | null;
+    createdAt: Date;
+  }>;
 };
 
 @Injectable()
@@ -43,16 +55,22 @@ export class PublicBookingsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async create(dto: CreatePublicServiceBookingDto, context: PublicBookingContext) {
+  async create(
+    dto: CreatePublicServiceBookingDto,
+    context: PublicBookingContext,
+  ) {
     const workspaceId = await this.resolveWorkspaceId();
     const email = this.normalizeEmail(dto.email);
     const phone = this.requireClean(dto.phone);
     const firstName = this.requireClean(dto.firstName);
     const lastName = this.requireClean(dto.lastName);
     const company = this.clean(dto.company);
-    const serviceName = this.clean(dto.serviceType) || this.serviceLineLabel(dto.serviceLine);
+    const serviceName =
+      this.clean(dto.serviceType) || this.serviceLineLabel(dto.serviceLine);
     const title = `${serviceName} request`;
-    const requestedStartAt = dto.requestedStartAt ? new Date(dto.requestedStartAt) : undefined;
+    const requestedStartAt = dto.requestedStartAt
+      ? new Date(dto.requestedStartAt)
+      : undefined;
 
     const serviceRequest = await this.prisma.$transaction(async (tx) => {
       const customer = await this.findOrCreateCustomer(tx, workspaceId, {
@@ -63,14 +81,24 @@ export class PublicBookingsService {
         lastName,
         dto,
       });
-      const contact = await this.findOrCreateContact(tx, workspaceId, customer.id, {
-        firstName,
-        lastName,
-        email,
-        phone,
-        serviceLine: dto.serviceLine,
-      });
-      const facility = await this.findOrCreateFacility(tx, workspaceId, customer.id, dto);
+      const contact = await this.findOrCreateContact(
+        tx,
+        workspaceId,
+        customer.id,
+        {
+          firstName,
+          lastName,
+          email,
+          phone,
+          serviceLine: dto.serviceLine,
+        },
+      );
+      const facility = await this.findOrCreateFacility(
+        tx,
+        workspaceId,
+        customer.id,
+        dto,
+      );
       const orderNumber = await this.generateOrderNumber(tx, workspaceId);
 
       const created = await tx.serviceRequest.create({
@@ -81,7 +109,13 @@ export class PublicBookingsService {
           facilityId: facility?.id,
           requestedByContactId: contact.id,
           title,
-          description: this.buildDescription(dto, firstName, lastName, email, phone),
+          description: this.buildDescription(
+            dto,
+            firstName,
+            lastName,
+            email,
+            phone,
+          ),
           serviceLine: dto.serviceLine,
           priority: this.priorityFor(dto.serviceLine, dto.message),
           status: ServiceRequestStatus.SUBMITTED,
@@ -121,17 +155,64 @@ export class PublicBookingsService {
         },
       });
 
-      if (this.emailDeliveryConfigured()) {
+      const emailReady = this.emailDeliveryConfigured();
+      const statusUrl = this.publicStatusUrl(orderNumber);
+      const internalEmail = this.internalBookingEmail();
+
+      await tx.backgroundJob.create({
+        data: {
+          workspaceId,
+          type: BackgroundJobType.EMAIL_DELIVERY,
+          payload: {
+            template: "PUBLIC_SERVICE_BOOKING_CONFIRMATION",
+            ready: emailReady,
+            requiresConfiguredMailer: !emailReady,
+            to: email,
+            subject: `AOG Services booking ${orderNumber}`,
+            orderNumber,
+            firstName,
+            lastName,
+            serviceLine: dto.serviceLine,
+            serviceName,
+            statusUrl,
+          } as Prisma.InputJsonValue,
+        },
+      });
+
+      if (internalEmail) {
+        await tx.notification.create({
+          data: {
+            workspaceId,
+            type: NotificationType.SERVICE_REQUEST,
+            channel: NotificationChannel.EMAIL,
+            title: `New service booking ${orderNumber}`,
+            body: `${firstName} ${lastName} requested ${serviceName}. Email: ${email}. Phone: ${phone}.`,
+            entityType: AttachmentEntityType.SERVICE_REQUEST,
+            entityId: created.id,
+          },
+        });
+
         await tx.backgroundJob.create({
           data: {
             workspaceId,
             type: BackgroundJobType.EMAIL_DELIVERY,
             payload: {
-              template: "PUBLIC_SERVICE_BOOKING_CONFIRMATION",
-              to: email,
+              template: "PUBLIC_SERVICE_BOOKING_INTERNAL_ALERT",
+              ready: emailReady,
+              requiresConfiguredMailer: !emailReady,
+              to: internalEmail,
+              subject: `New AOG service booking ${orderNumber}`,
               orderNumber,
+              customerName: customer.name,
               firstName,
+              lastName,
+              email,
+              phone,
               serviceLine: dto.serviceLine,
+              serviceName,
+              facilityName: this.clean(dto.facilityName),
+              requestedStartAt: requestedStartAt?.toISOString(),
+              statusUrl,
             } as Prisma.InputJsonValue,
           },
         });
@@ -163,9 +244,11 @@ export class PublicBookingsService {
       orderNumber: serviceRequest.requestNumber,
       status: this.publicStatus(serviceRequest.status),
       statusCode: serviceRequest.status,
-      message: "Your service booking was received. Use this order number to check status.",
+      message:
+        "Your service booking was received. Use this order number to check status.",
       requestedStartAt: serviceRequest.requestedStartAt,
       createdAt: serviceRequest.createdAt,
+      statusUrl: this.publicStatusUrl(serviceRequest.requestNumber),
     };
   }
 
@@ -198,21 +281,27 @@ export class PublicBookingsService {
     });
 
     if (!serviceRequest) {
-      throw new NotFoundException("Booking was not found for the details provided");
+      throw new NotFoundException(
+        "Booking was not found for the details provided",
+      );
     }
 
     return this.toPublicStatusResponse(serviceRequest);
   }
 
   private async resolveWorkspaceId() {
-    const configuredWorkspaceId = this.configService.get<string>("PUBLIC_BOOKING_WORKSPACE_ID")?.trim();
+    const configuredWorkspaceId = this.configService
+      .get<string>("PUBLIC_BOOKING_WORKSPACE_ID")
+      ?.trim();
     if (configuredWorkspaceId) {
       const workspace = await this.prisma.workspace.findFirst({
         where: { id: configuredWorkspaceId, isActive: true },
         select: { id: true },
       });
       if (!workspace) {
-        throw new BadRequestException("PUBLIC_BOOKING_WORKSPACE_ID does not match an active workspace");
+        throw new BadRequestException(
+          "PUBLIC_BOOKING_WORKSPACE_ID does not match an active workspace",
+        );
       }
       return workspace.id;
     }
@@ -224,7 +313,9 @@ export class PublicBookingsService {
     });
 
     if (!fallback) {
-      throw new BadRequestException("Public booking workspace is not configured");
+      throw new BadRequestException(
+        "Public booking workspace is not configured",
+      );
     }
 
     return fallback.id;
@@ -270,7 +361,10 @@ export class PublicBookingsService {
         where: { id: existing.id },
         data: {
           ...common,
-          status: existing.status === CustomerStatus.ARCHIVED ? CustomerStatus.LEAD : existing.status,
+          status:
+            existing.status === CustomerStatus.ARCHIVED
+              ? CustomerStatus.LEAD
+              : existing.status,
         },
       });
     }
@@ -349,7 +443,9 @@ export class PublicBookingsService {
       return undefined;
     }
 
-    const name = this.clean(dto.facilityName) || `${this.clean(dto.company) || "Customer"} site`;
+    const name =
+      this.clean(dto.facilityName) ||
+      `${this.clean(dto.company) || "Customer"} site`;
     const addressLine1 = this.clean(dto.addressLine1);
 
     const existing = await tx.facility.findFirst({
@@ -383,7 +479,10 @@ export class PublicBookingsService {
     });
   }
 
-  private async generateOrderNumber(tx: Prisma.TransactionClient, workspaceId: string) {
+  private async generateOrderNumber(
+    tx: Prisma.TransactionClient,
+    workspaceId: string,
+  ) {
     const prefix = this.monthlyPrefix();
     let sequence =
       (await tx.serviceRequest.count({
@@ -424,6 +523,12 @@ export class PublicBookingsService {
         workOrderNumber: workOrder.workOrderNumber,
         status: workOrder.status,
       })),
+      timeline: serviceRequest.statusHistory.map((event) => ({
+        status: this.publicStatus(event.toStatus),
+        statusCode: event.toStatus,
+        note: event.note,
+        at: event.createdAt,
+      })),
     };
   }
 
@@ -431,10 +536,16 @@ export class PublicBookingsService {
     return {
       customer: { select: { name: true } },
       facility: { select: { name: true, city: true, state: true } },
-      requestedByContact: { select: { firstName: true, lastName: true, email: true, phone: true } },
+      requestedByContact: {
+        select: { firstName: true, lastName: true, email: true, phone: true },
+      },
       workOrders: {
         select: { workOrderNumber: true, status: true },
         orderBy: { createdAt: "desc" as const },
+      },
+      statusHistory: {
+        select: { toStatus: true, note: true, createdAt: true },
+        orderBy: { createdAt: "asc" as const },
       },
     };
   }
@@ -450,12 +561,19 @@ export class PublicBookingsService {
       `Public booking submitted by ${firstName} ${lastName}.`,
       `Contact: ${email} | ${phone}`,
       dto.company ? `Company: ${this.clean(dto.company)}` : undefined,
-      dto.facilityName ? `Facility: ${this.clean(dto.facilityName)}` : undefined,
+      dto.facilityName
+        ? `Facility: ${this.clean(dto.facilityName)}`
+        : undefined,
       dto.addressLine1 ? `Address: ${this.clean(dto.addressLine1)}` : undefined,
       dto.city || dto.state || dto.postalCode
-        ? `Location: ${[dto.city, dto.state, dto.postalCode].map((value) => this.clean(value)).filter(Boolean).join(", ")}`
+        ? `Location: ${[dto.city, dto.state, dto.postalCode]
+            .map((value) => this.clean(value))
+            .filter(Boolean)
+            .join(", ")}`
         : undefined,
-      dto.preferredTimeWindow ? `Preferred window: ${this.clean(dto.preferredTimeWindow)}` : undefined,
+      dto.preferredTimeWindow
+        ? `Preferred window: ${this.clean(dto.preferredTimeWindow)}`
+        : undefined,
       `Details: ${this.clean(dto.message)}`,
     ]
       .filter(Boolean)
@@ -464,7 +582,11 @@ export class PublicBookingsService {
 
   private priorityFor(serviceLine: ServiceLine, message: string) {
     const text = message.toLowerCase();
-    if (text.includes("emergency") || text.includes("urgent") || text.includes("asap")) {
+    if (
+      text.includes("emergency") ||
+      text.includes("urgent") ||
+      text.includes("asap")
+    ) {
       return ServiceRequestPriority.URGENT;
     }
     if (serviceLine === ServiceLine.SECURITY) {
@@ -475,7 +597,8 @@ export class PublicBookingsService {
 
   private facilityTypeFor(serviceLine: ServiceLine) {
     if (serviceLine === ServiceLine.PARKING) return FacilityType.PARKING_LOT;
-    if (serviceLine === ServiceLine.EVENT_SETUP) return FacilityType.EVENT_VENUE;
+    if (serviceLine === ServiceLine.EVENT_SETUP)
+      return FacilityType.EVENT_VENUE;
     return FacilityType.OFFICE;
   }
 
@@ -543,7 +666,40 @@ export class PublicBookingsService {
 
   private emailDeliveryConfigured() {
     const emailFrom = this.configService.get<string>("EMAIL_FROM");
-    return Boolean(emailFrom && (this.configService.get<string>("SMTP_HOST") || this.configService.get<string>("MAIL_PROVIDER")));
+    return Boolean(
+      emailFrom &&
+      (this.configService.get<string>("SMTP_HOST") ||
+        this.configService.get<string>("MAIL_PROVIDER")),
+    );
+  }
+
+  private internalBookingEmail() {
+    return this.configService
+      .get<string>("PUBLIC_BOOKING_INTERNAL_EMAIL")
+      ?.trim();
+  }
+
+  private publicStatusUrl(orderNumber: string) {
+    const publicAppUrl = this.configService
+      .get<string>("PUBLIC_APP_URL")
+      ?.trim();
+    if (publicAppUrl) {
+      return `${publicAppUrl.replace(/\/$/, "")}/booking-status?order=${encodeURIComponent(orderNumber)}`;
+    }
+
+    const corsOrigins = this.configService
+      .get<string>("CORS_ORIGIN")
+      ?.split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+    const corsOrigin =
+      corsOrigins?.find((origin) => origin.includes("localhost:3002")) ??
+      corsOrigins?.[0];
+    if (corsOrigin) {
+      return `${corsOrigin.replace(/\/$/, "")}/booking-status?order=${encodeURIComponent(orderNumber)}`;
+    }
+
+    return `/booking-status?order=${encodeURIComponent(orderNumber)}`;
   }
 
   private clean(value?: string | null) {
