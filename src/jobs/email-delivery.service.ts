@@ -31,6 +31,7 @@ type EmailPayload = {
   phone?: string;
   facilityName?: string;
   requestedStartAt?: string;
+  inviteUrl?: string;
 };
 
 @Injectable()
@@ -201,6 +202,22 @@ export class EmailDeliveryService implements OnModuleInit, OnModuleDestroy {
           ? `Requested start: ${payload.requestedStartAt}`
           : undefined,
         payload.statusUrl ? `Status: ${payload.statusUrl}` : undefined,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      return { subject, text, html: this.basicHtml(subject, text) };
+    }
+
+    if (payload.template === "AOG_PORTAL_INVITE") {
+      const subject = payload.subject ?? "Your AOG Services portal invitation";
+      const text = [
+        `Hi ${payload.firstName ?? "there"},`,
+        "",
+        "AOG Services invited you to access the portal.",
+        payload.inviteUrl ? `Accept invite: ${payload.inviteUrl}` : undefined,
+        "",
+        "This link lets you set your password and sign in.",
       ]
         .filter(Boolean)
         .join("\n");

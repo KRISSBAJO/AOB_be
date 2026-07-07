@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { CustomerStatus, FacilityStatus } from "@prisma/client";
 
+import { AuthService } from "../auth/auth.service";
+import { InviteUserDto } from "../auth/dto/invite-user.dto";
 import { getPagination, textSearch } from "../common/utils/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateCustomerDto, CreateCustomerContactDto, UpdateCustomerContactDto, UpdateCustomerDto } from "./dto/customer.dto";
@@ -9,7 +11,10 @@ import { CreateFacilityContactDto, CreateFacilityDto, UpdateFacilityContactDto, 
 
 @Injectable()
 export class CustomersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
 
   async listCustomers(workspaceId: string, query: ListCustomersQueryDto) {
     const { skip, take } = getPagination(query);
@@ -165,6 +170,19 @@ export class CustomersService {
     return this.prisma.customerContact.delete({
       where: { id, workspaceId },
     });
+  }
+
+  async inviteCustomerContact(
+    workspaceId: string,
+    id: string,
+    dto: InviteUserDto,
+  ) {
+    await this.prisma.customerContact.findFirstOrThrow({
+      where: { id, workspaceId },
+      select: { id: true },
+    });
+
+    return this.authService.inviteCustomerContact(workspaceId, id, dto);
   }
 
   async listFacilities(workspaceId: string, query: ListFacilitiesQueryDto) {
@@ -338,6 +356,55 @@ export class CustomersService {
     });
   }
 
+  async inviteFacilityContact(
+    workspaceId: string,
+    id: string,
+    dto: InviteUserDto,
+  ) {
+    const contact = await this.prisma.facilityContact.findFirstOrThrow({
+      where: { id, workspaceId },
+      include: { facility: { select: { customerId: true } } },
+    });
+
+    if (!contact.email) {
+      throw new BadRequestException(
+        "Facility contact email is required before sending portal access",
+      );
+    }
+
+    let customerContactId = contact.customerContactId;
+
+    if (!customerContactId) {
+      const name = this.splitContactName(contact.name);
+      const customerContact = await this.prisma.customerContact.create({
+        data: {
+          workspaceId,
+          customerId: contact.facility.customerId,
+          firstName: name.firstName,
+          lastName: name.lastName,
+          email: contact.email.trim().toLowerCase(),
+          phone: contact.phone?.trim(),
+          role: contact.role,
+          isPrimary: contact.isPrimary,
+          canLogin: true,
+        },
+      });
+
+      await this.prisma.facilityContact.update({
+        where: { id: contact.id },
+        data: { customerContactId: customerContact.id },
+      });
+
+      customerContactId = customerContact.id;
+    }
+
+    return this.authService.inviteCustomerContact(
+      workspaceId,
+      customerContactId,
+      dto,
+    );
+  }
+
   private assertCustomer(workspaceId: string, customerId: string) {
     return this.prisma.customer.findFirstOrThrow({
       where: { id: customerId, workspaceId, deletedAt: null },
@@ -364,5 +431,13 @@ export class CustomersService {
     if (!contact) {
       throw new BadRequestException("Customer contact does not belong to this facility customer");
     }
+  }
+
+  private splitContactName(name: string) {
+    const [firstName, ...lastNameParts] = name.trim().split(/\s+/);
+    return {
+      firstName: firstName || "Facility",
+      lastName: lastNameParts.join(" ") || "Contact",
+    };
   }
 }

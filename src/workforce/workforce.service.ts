@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { EmployeeStatus } from "@prisma/client";
 
+import { AuthService } from "../auth/auth.service";
+import { InviteUserDto } from "../auth/dto/invite-user.dto";
 import { getPagination, textSearch } from "../common/utils/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import {
@@ -24,7 +26,10 @@ import {
 
 @Injectable()
 export class WorkforceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
 
   async listDepartments(workspaceId: string, query: ListDepartmentsQueryDto) {
     const { skip, take } = getPagination(query);
@@ -291,6 +296,11 @@ export class WorkforceService {
       data: { status: EmployeeStatus.TERMINATED, terminationDate: new Date() },
       include: this.employeeInclude(),
     });
+  }
+
+  async inviteEmployee(workspaceId: string, id: string, dto: InviteUserDto) {
+    await this.assertEmployee(workspaceId, id);
+    return this.authService.inviteEmployee(workspaceId, id, dto);
   }
 
   async assignSkill(

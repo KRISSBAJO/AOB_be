@@ -6,6 +6,7 @@ import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { WorkspaceGuard } from "../common/guards/workspace.guard";
 import { WorkspaceRequest } from "../common/http/workspace-request";
+import { InviteUserDto } from "../auth/dto/invite-user.dto";
 import { ListDepartmentsQueryDto, ListEmployeesQueryDto } from "./dto/workforce-query.dto";
 import {
   AssignEmployeeCertificationDto,
@@ -138,6 +139,15 @@ export class WorkforceController {
   @Delete("employees/:id")
   terminateEmployee(@Req() request: WorkspaceRequest, @Param("id") id: string) {
     return this.workforceService.terminateEmployee(request.workspaceId, id);
+  }
+
+  @Post("employees/:id/invite")
+  inviteEmployee(
+    @Req() request: WorkspaceRequest,
+    @Param("id") id: string,
+    @Body() dto: InviteUserDto,
+  ) {
+    return this.workforceService.inviteEmployee(request.workspaceId, id, dto);
   }
 
   @Post("employees/:id/skills")

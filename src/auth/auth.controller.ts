@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 
@@ -6,6 +6,7 @@ import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { AuthenticatedUser } from "../common/auth/authenticated-user";
 import { AuthCookieService } from "./auth-cookie.service";
+import { AcceptInviteDto } from "./dto/accept-invite.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
@@ -24,6 +25,20 @@ export class AuthController {
   @Post("sign-up")
   async signUp(@Body() dto: SignUpDto, @Res({ passthrough: true }) response: Response) {
     const session = await this.authService.signUp(dto);
+    return this.completeAuth(response, session);
+  }
+
+  @Get("invitations/:token")
+  getInvitation(@Param("token") token: string) {
+    return this.authService.getInvitation(token);
+  }
+
+  @Post("accept-invite")
+  async acceptInvite(
+    @Body() dto: AcceptInviteDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const session = await this.authService.acceptInvite(dto);
     return this.completeAuth(response, session);
   }
 

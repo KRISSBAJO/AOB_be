@@ -6,6 +6,7 @@ import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { WorkspaceGuard } from "../common/guards/workspace.guard";
 import { WorkspaceRequest } from "../common/http/workspace-request";
+import { InviteUserDto } from "../auth/dto/invite-user.dto";
 import { CreateCustomerDto, CreateCustomerContactDto, UpdateCustomerContactDto, UpdateCustomerDto } from "./dto/customer.dto";
 import { ListCustomersQueryDto, ListFacilitiesQueryDto } from "./dto/customer-query.dto";
 import { CreateFacilityContactDto, CreateFacilityDto, UpdateFacilityContactDto, UpdateFacilityDto } from "./dto/facility.dto";
@@ -76,6 +77,15 @@ export class CustomersController {
     return this.customersService.deleteCustomerContact(request.workspaceId, id);
   }
 
+  @Post("customer-contacts/:id/invite")
+  inviteCustomerContact(
+    @Req() request: WorkspaceRequest,
+    @Param("id") id: string,
+    @Body() dto: InviteUserDto,
+  ) {
+    return this.customersService.inviteCustomerContact(request.workspaceId, id, dto);
+  }
+
   @Get("facilities")
   listFacilities(@Req() request: WorkspaceRequest, @Query() query: ListFacilitiesQueryDto) {
     return this.customersService.listFacilities(request.workspaceId, query);
@@ -131,5 +141,14 @@ export class CustomersController {
   @Delete("facility-contacts/:id")
   deleteFacilityContact(@Req() request: WorkspaceRequest, @Param("id") id: string) {
     return this.customersService.deleteFacilityContact(request.workspaceId, id);
+  }
+
+  @Post("facility-contacts/:id/invite")
+  inviteFacilityContact(
+    @Req() request: WorkspaceRequest,
+    @Param("id") id: string,
+    @Body() dto: InviteUserDto,
+  ) {
+    return this.customersService.inviteFacilityContact(request.workspaceId, id, dto);
   }
 }
