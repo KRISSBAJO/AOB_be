@@ -4,6 +4,7 @@ import { JwtService } from "@nestjs/jwt";
 import { Request } from "express";
 
 import { AuthenticatedUser } from "../auth/authenticated-user";
+import { DEFAULT_ACCESS_COOKIE_NAME, readCookie } from "../http/auth-cookies";
 
 type AuthenticatedRequest = Request & {
   user?: AuthenticatedUser;
@@ -19,13 +20,17 @@ export class JwtAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const header = request.header("authorization");
-
-    if (!header?.startsWith("Bearer ")) {
-      throw new UnauthorizedException("Missing bearer token");
-    }
-
-    const token = header.slice("Bearer ".length);
+    const token = header?.startsWith("Bearer ")
+      ? header.slice("Bearer ".length)
+      : readCookie(
+          request.headers.cookie,
+          this.configService.get<string>("AUTH_ACCESS_COOKIE_NAME") ?? DEFAULT_ACCESS_COOKIE_NAME,
+        );
     const secret = this.configService.get<string>("JWT_SECRET");
+
+    if (!token) {
+      throw new UnauthorizedException("Missing access token");
+    }
 
     if (!secret) {
       throw new UnauthorizedException("JWT is not configured");
@@ -50,4 +55,3 @@ export class JwtAuthGuard implements CanActivate {
     }
   }
 }
-

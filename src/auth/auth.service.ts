@@ -118,7 +118,11 @@ export class AuthService {
     return this.withTokens(user, user.memberships[0]?.workspaceId);
   }
 
-  async refresh(refreshToken: string) {
+  async refresh(refreshToken?: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException("Missing refresh token");
+    }
+
     const secret = this.getRefreshSecret();
     let payload: { sub: string; sid: string; type: string };
 
@@ -137,12 +141,22 @@ export class AuthService {
       include: { user: true },
     });
 
+    const presentedTokenHash = hashToken(refreshToken);
+
+    if (session?.revokedAt && session.tokenHash === presentedTokenHash) {
+      await this.prisma.refreshSession.updateMany({
+        where: { userId: session.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new UnauthorizedException("Refresh token reuse detected");
+    }
+
     if (
       !session ||
       session.userId !== payload.sub ||
       session.revokedAt ||
       session.expiresAt <= new Date() ||
-      session.tokenHash !== hashToken(refreshToken)
+      session.tokenHash !== presentedTokenHash
     ) {
       throw new UnauthorizedException("Refresh session is no longer valid");
     }
@@ -265,11 +279,14 @@ export class AuthService {
     user: { id: string; email: string; displayName: string; isSiteAdmin: boolean },
     activeWorkspaceId?: string,
   ) {
+    const accessTtlSeconds = this.configService.get<number>("JWT_ACCESS_TTL_SECONDS", 3600);
+    const refreshExpiresAt = this.refreshExpiry();
+
     const session = await this.prisma.refreshSession.create({
       data: {
         userId: user.id,
         tokenHash: "pending",
-        expiresAt: this.refreshExpiry(),
+        expiresAt: refreshExpiresAt,
       },
     });
 
@@ -281,7 +298,7 @@ export class AuthService {
       },
       {
         secret: this.getAccessSecret(),
-        expiresIn: this.configService.get<number>("JWT_ACCESS_TTL_SECONDS", 900),
+        expiresIn: accessTtlSeconds,
       },
     );
 
@@ -293,7 +310,7 @@ export class AuthService {
       },
       {
         secret: this.getRefreshSecret(),
-        expiresIn: `${this.configService.get<number>("JWT_REFRESH_TTL_DAYS", 30)}d`,
+        expiresIn: `${this.configService.get<number>("JWT_REFRESH_TTL_DAYS", 45)}d`,
       },
     );
 
@@ -305,6 +322,8 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
+      accessTokenExpiresAt: new Date(Date.now() + accessTtlSeconds * 1000),
+      refreshTokenExpiresAt: refreshExpiresAt,
       user: this.serializeUser(user),
       activeWorkspaceId,
     };
@@ -338,7 +357,7 @@ export class AuthService {
   }
 
   private refreshExpiry() {
-    const days = this.configService.get<number>("JWT_REFRESH_TTL_DAYS", 30);
+    const days = this.configService.get<number>("JWT_REFRESH_TTL_DAYS", 45);
     return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
   }
 
@@ -355,4 +374,3 @@ export class AuthService {
     return slug;
   }
 }
-

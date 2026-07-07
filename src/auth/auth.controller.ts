@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import type { Request, Response } from "express";
 
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { AuthenticatedUser } from "../common/auth/authenticated-user";
+import { AuthCookieService } from "./auth-cookie.service";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
@@ -14,26 +16,46 @@ import { AuthService } from "./auth.service";
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly authCookieService: AuthCookieService,
+  ) {}
 
   @Post("sign-up")
-  signUp(@Body() dto: SignUpDto) {
-    return this.authService.signUp(dto);
+  async signUp(@Body() dto: SignUpDto, @Res({ passthrough: true }) response: Response) {
+    const session = await this.authService.signUp(dto);
+    return this.completeAuth(response, session);
   }
 
   @Post("sign-in")
-  signIn(@Body() dto: SignInDto) {
-    return this.authService.signIn(dto);
+  async signIn(@Body() dto: SignInDto, @Res({ passthrough: true }) response: Response) {
+    const session = await this.authService.signIn(dto);
+    return this.completeAuth(response, session);
   }
 
   @Post("refresh")
-  refresh(@Body() dto: RefreshTokenDto) {
-    return this.authService.refresh(dto.refreshToken);
+  async refresh(
+    @Req() request: Request,
+    @Body() dto: Partial<RefreshTokenDto>,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const refreshToken =
+      this.authCookieService.readRefreshToken(request.headers.cookie) ?? dto.refreshToken;
+    const session = await this.authService.refresh(refreshToken);
+    return this.completeAuth(response, session);
   }
 
   @Post("logout")
-  logout(@Body() dto: Partial<RefreshTokenDto>) {
-    return this.authService.logout(dto.refreshToken);
+  async logout(
+    @Req() request: Request,
+    @Body() dto: Partial<RefreshTokenDto>,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const refreshToken =
+      this.authCookieService.readRefreshToken(request.headers.cookie) ?? dto.refreshToken;
+    const result = await this.authService.logout(refreshToken);
+    this.authCookieService.clearAuthCookies(response);
+    return result;
   }
 
   @Post("forgot-password")
@@ -52,5 +74,10 @@ export class AuthController {
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.me(user.id);
   }
-}
 
+  private completeAuth(response: Response, session: Awaited<ReturnType<AuthService["signIn"]>>) {
+    this.authCookieService.setAuthCookies(response, session);
+    const { accessToken: _accessToken, refreshToken: _refreshToken, ...body } = session;
+    return body;
+  }
+}
