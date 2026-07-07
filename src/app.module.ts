@@ -31,6 +31,7 @@ import { FilesModule } from "./files/files.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { ReportsModule } from "./reports/reports.module";
 import { AdminModule } from "./admin/admin.module";
+import { PublicBookingsModule } from "./public-bookings/public-bookings.module";
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { AdminModule } from "./admin/admin.module";
     DashboardModule,
     ReportsModule,
     AdminModule,
+    PublicBookingsModule,
     ResourcesModule,
   ],
   providers: [
