@@ -1,5 +1,6 @@
 import {
   ArgumentsHost,
+  BadRequestException,
   Catch,
   ConflictException,
   ExceptionFilter,
@@ -9,9 +10,13 @@ import {
 import { Prisma } from "@prisma/client";
 import { Response } from "express";
 
-@Catch(Prisma.PrismaClientKnownRequestError)
+@Catch(Prisma.PrismaClientKnownRequestError, Prisma.PrismaClientValidationError)
 export class PrismaExceptionFilter implements ExceptionFilter {
-  catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
+  catch(
+    exception:
+      Prisma.PrismaClientKnownRequestError | Prisma.PrismaClientValidationError,
+    host: ArgumentsHost,
+  ) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const mappedException = this.mapException(exception);
@@ -21,14 +26,23 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       statusCode: status,
       message: mappedException.message,
       error: mappedException.name,
-      prismaCode: exception.code,
+      ...("code" in exception ? { prismaCode: exception.code } : {}),
     });
   }
 
-  private mapException(exception: Prisma.PrismaClientKnownRequestError) {
+  private mapException(
+    exception:
+      Prisma.PrismaClientKnownRequestError | Prisma.PrismaClientValidationError,
+  ) {
+    if (exception instanceof Prisma.PrismaClientValidationError) {
+      return new BadRequestException("Invalid request payload");
+    }
+
     switch (exception.code) {
       case "P2002":
-        return new ConflictException("A record with this unique value already exists");
+        return new ConflictException(
+          "A record with this unique value already exists",
+        );
       case "P2025":
         return new NotFoundException("Record not found");
       default:
@@ -36,4 +50,3 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     }
   }
 }
-

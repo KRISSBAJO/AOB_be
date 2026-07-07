@@ -3,7 +3,10 @@ import { EmployeeStatus } from "@prisma/client";
 
 import { getPagination, textSearch } from "../common/utils/pagination";
 import { PrismaService } from "../prisma/prisma.service";
-import { ListDepartmentsQueryDto, ListEmployeesQueryDto } from "./dto/workforce-query.dto";
+import {
+  ListDepartmentsQueryDto,
+  ListEmployeesQueryDto,
+} from "./dto/workforce-query.dto";
 import {
   AssignEmployeeCertificationDto,
   AssignEmployeeSkillDto,
@@ -39,7 +42,11 @@ export class WorkforceService {
         skip,
         take,
         orderBy: [{ isActive: "desc" }, { name: "asc" }],
-        include: { _count: { select: { employees: true, positions: true, shifts: true } } },
+        include: {
+          _count: {
+            select: { employees: true, positions: true, shifts: true },
+          },
+        },
       }),
       this.prisma.department.count({ where }),
     ]);
@@ -82,7 +89,11 @@ export class WorkforceService {
     });
   }
 
-  async updatePosition(workspaceId: string, id: string, dto: UpdatePositionDto) {
+  async updatePosition(
+    workspaceId: string,
+    id: string,
+    dto: UpdatePositionDto,
+  ) {
     await this.assertDepartment(workspaceId, dto.departmentId);
     return this.prisma.position.update({
       where: { id, workspaceId },
@@ -134,7 +145,11 @@ export class WorkforceService {
     });
   }
 
-  updateCertification(workspaceId: string, id: string, dto: UpdateCertificationDto) {
+  updateCertification(
+    workspaceId: string,
+    id: string,
+    dto: UpdateCertificationDto,
+  ) {
     return this.prisma.certification.update({
       where: { id, workspaceId },
       data: { ...dto, name: dto.name?.trim() },
@@ -147,13 +162,21 @@ export class WorkforceService {
 
   async listEmployees(workspaceId: string, query: ListEmployeesQueryDto) {
     const { skip, take } = getPagination(query);
-    const search = textSearch(query.search, ["employeeNumber", "firstName", "lastName", "email", "phone"]);
+    const search = textSearch(query.search, [
+      "employeeNumber",
+      "firstName",
+      "lastName",
+      "email",
+      "phone",
+    ]);
     const where = {
       workspaceId,
       ...(query.departmentId ? { departmentId: query.departmentId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.employmentType ? { employmentType: query.employmentType } : {}),
-      ...(query.serviceLine ? { serviceLines: { has: query.serviceLine } } : {}),
+      ...(query.serviceLine
+        ? { serviceLines: { has: query.serviceLine } }
+        : {}),
       ...(search ? { OR: search } : {}),
     };
 
@@ -177,14 +200,26 @@ export class WorkforceService {
 
     return this.prisma.employee.create({
       data: {
-        ...dto,
         workspaceId,
-        employeeNumber: dto.employeeNumber?.trim() || (await this.generateEmployeeNumber(workspaceId)),
+        employeeNumber:
+          dto.employeeNumber?.trim() ||
+          (await this.generateEmployeeNumber(workspaceId)),
+        userId: dto.userId,
+        departmentId: dto.departmentId,
+        positionId: dto.positionId,
         firstName: dto.firstName.trim(),
         lastName: dto.lastName.trim(),
         email: dto.email?.trim().toLowerCase(),
+        phone: dto.phone?.trim(),
+        status: dto.status,
+        employmentType: dto.employmentType,
         hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
-        terminationDate: dto.terminationDate ? new Date(dto.terminationDate) : undefined,
+        terminationDate: dto.terminationDate
+          ? new Date(dto.terminationDate)
+          : undefined,
+        hourlyRate: dto.hourlyRate,
+        serviceLines: dto.serviceLines,
+        notes: dto.notes,
       },
       include: this.employeeInclude(),
     });
@@ -201,7 +236,11 @@ export class WorkforceService {
     });
   }
 
-  async updateEmployee(workspaceId: string, id: string, dto: UpdateEmployeeDto) {
+  async updateEmployee(
+    workspaceId: string,
+    id: string,
+    dto: UpdateEmployeeDto,
+  ) {
     await this.assertDepartment(workspaceId, dto.departmentId);
     await this.assertPosition(workspaceId, dto.positionId);
     this.assertEmploymentDates(dto.hireDate, dto.terminationDate);
@@ -209,13 +248,23 @@ export class WorkforceService {
     return this.prisma.employee.update({
       where: { id, workspaceId },
       data: {
-        ...dto,
         employeeNumber: dto.employeeNumber?.trim(),
+        userId: dto.userId,
+        departmentId: dto.departmentId,
+        positionId: dto.positionId,
         firstName: dto.firstName?.trim(),
         lastName: dto.lastName?.trim(),
         email: dto.email?.trim().toLowerCase(),
+        phone: dto.phone?.trim(),
+        status: dto.status,
+        employmentType: dto.employmentType,
         hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
-        terminationDate: dto.terminationDate ? new Date(dto.terminationDate) : undefined,
+        terminationDate: dto.terminationDate
+          ? new Date(dto.terminationDate)
+          : undefined,
+        hourlyRate: dto.hourlyRate,
+        serviceLines: dto.serviceLines,
+        notes: dto.notes,
       },
       include: this.employeeInclude(),
     });
@@ -229,13 +278,24 @@ export class WorkforceService {
     });
   }
 
-  async assignSkill(workspaceId: string, employeeId: string, dto: AssignEmployeeSkillDto) {
+  async assignSkill(
+    workspaceId: string,
+    employeeId: string,
+    dto: AssignEmployeeSkillDto,
+  ) {
     await this.assertEmployee(workspaceId, employeeId);
-    await this.prisma.skill.findFirstOrThrow({ where: { id: dto.skillId, workspaceId } });
+    await this.prisma.skill.findFirstOrThrow({
+      where: { id: dto.skillId, workspaceId },
+    });
 
     return this.prisma.employeeSkill.upsert({
       where: { employeeId_skillId: { employeeId, skillId: dto.skillId } },
-      create: { workspaceId, employeeId, skillId: dto.skillId, level: dto.level },
+      create: {
+        workspaceId,
+        employeeId,
+        skillId: dto.skillId,
+        level: dto.level,
+      },
       update: { level: dto.level },
       include: { skill: true },
     });
@@ -252,7 +312,9 @@ export class WorkforceService {
     });
 
     if (certification.expires && !dto.expiresAt) {
-      throw new BadRequestException("expiresAt is required for expiring certifications");
+      throw new BadRequestException(
+        "expiresAt is required for expiring certifications",
+      );
     }
 
     return this.prisma.employeeCertification.create({
@@ -273,33 +335,48 @@ export class WorkforceService {
     return {
       department: { select: { id: true, name: true, type: true } },
       position: { select: { id: true, title: true } },
-      _count: { select: { skills: true, certifications: true, shiftAssignments: true } },
+      _count: {
+        select: { skills: true, certifications: true, shiftAssignments: true },
+      },
     };
   }
 
   private async assertDepartment(workspaceId: string, departmentId?: string) {
     if (!departmentId) return;
-    await this.prisma.department.findFirstOrThrow({ where: { id: departmentId, workspaceId } });
+    await this.prisma.department.findFirstOrThrow({
+      where: { id: departmentId, workspaceId },
+    });
   }
 
   private async assertPosition(workspaceId: string, positionId?: string) {
     if (!positionId) return;
-    await this.prisma.position.findFirstOrThrow({ where: { id: positionId, workspaceId } });
+    await this.prisma.position.findFirstOrThrow({
+      where: { id: positionId, workspaceId },
+    });
   }
 
   private async assertEmployee(workspaceId: string, employeeId: string) {
-    await this.prisma.employee.findFirstOrThrow({ where: { id: employeeId, workspaceId } });
+    await this.prisma.employee.findFirstOrThrow({
+      where: { id: employeeId, workspaceId },
+    });
   }
 
   private assertEmploymentDates(hireDate?: string, terminationDate?: string) {
-    if (hireDate && terminationDate && new Date(terminationDate) < new Date(hireDate)) {
-      throw new BadRequestException("terminationDate cannot be earlier than hireDate");
+    if (
+      hireDate &&
+      terminationDate &&
+      new Date(terminationDate) < new Date(hireDate)
+    ) {
+      throw new BadRequestException(
+        "terminationDate cannot be earlier than hireDate",
+      );
     }
   }
 
   private async generateEmployeeNumber(workspaceId: string) {
     const prefix = "EMP";
-    let sequence = (await this.prisma.employee.count({ where: { workspaceId } })) + 1;
+    let sequence =
+      (await this.prisma.employee.count({ where: { workspaceId } })) + 1;
 
     while (true) {
       const employeeNumber = `${prefix}-${String(sequence).padStart(5, "0")}`;
